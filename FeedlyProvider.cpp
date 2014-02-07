@@ -20,15 +20,19 @@ string FeedlyProvider::getAuthCode(){
         FILE* temp = fopen("temp.txt", "wb");
 
         curl_easy_setopt(curl, CURLOPT_URL, string(GOOGLE_AUTH_URL).c_str()); 
-        curl_easy_setopt(curl, CURLOPT_POST, 1);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "signIn=Sign+in&_utf8=&#9731;&bgresponse=js_disabled&GALX=QR2u_Ga6i_A&pstMsg=&dnCon=&checkConnection=youtube:1141:1&checkedDomains=youtube&Email=jorgemartinezhernandez&Passwd=trueforerunner117");
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/4.0");
+        curl_easy_setopt(curl, CURLOPT_AUTOREFERER, 1 );
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
         curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "cookie");
         curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "cookie");
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, temp);
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
-        curl_res = curl_easy_perform(curl);
+        curl_easy_perform(curl);
 
+        curl_easy_setopt(curl, CURLOPT_REFERER, string(GOOGLE_AUTH_URL).c_str());
+        curl_easy_setopt(curl, CURLOPT_POST, 1);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, ("signIn=Sign+in&_utf8=&#9731;&bgresponse=js_disabled&GALX=" + extract_galx_value() + "&pstMsg=&dnCon=&checkConnection=youtube:1141:1&checkedDomains=youtube&Email=jorgemartinezhernandez&Passwd=trueforerunner117").c_str());
+        curl_res = curl_easy_perform(curl);
         char *currentURL;
 
         if(curl_res != CURLE_OK){
@@ -92,18 +96,17 @@ const char* FeedlyProvider::getTokens(){
 } 
 void FeedlyProvider::giveAll(){
 }
-string FeedlyProvider::extract_google_auth_url(){
+string FeedlyProvider::extract_galx_value(){
 
         string l;
         ifstream temp;
-        temp.open("temp.txt");
+        temp.open("cookie");
         int index;
 
         while(getline(temp, l)){
-                index = l.find("https://accounts.google");
-
-                if(index > 0){
-                        return l.substr(index, (l.find("\"", index)-index));
+                index = l.find("GALX");
+                if(index > 0 && index != string::npos){
+                        return l.substr(l.find('X') + 2);
                 }
         } 
 
