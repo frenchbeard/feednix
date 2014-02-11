@@ -12,9 +12,10 @@ using namespace std;
 FeedlyProvider::FeedlyProvider(){
 
         curl_global_init(CURL_GLOBAL_DEFAULT);
+        verboseFlag = false;
 }
 
-string FeedlyProvider::getAuthCode(const string& email, const string& passwd){
+string FeedlyProvider::authenticateUser(const string& email, const string& passwd){
 
         FILE* temp = fopen("temp.txt", "wb");
 
@@ -28,7 +29,8 @@ string FeedlyProvider::getAuthCode(const string& email, const string& passwd){
         curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "cookie");
         curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "cookie");
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, temp);
-//        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+        if(verboseFlag)
+                curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
         curl_res = curl_easy_perform(curl);
 
         curl_easy_setopt(curl, CURLOPT_REFERER, string(GOOGLE_AUTH_URL).c_str());
@@ -59,7 +61,7 @@ string FeedlyProvider::getAuthCode(const string& email, const string& passwd){
 
 
 }
-void FeedlyProvider::getTokens(){
+void FeedlyProvider::parseAuthenticationResponse(){
 
         struct curl_httppost *formpost = NULL;
         FILE *tokenJSON = fopen("tokenFile.json", "wb");
@@ -84,13 +86,15 @@ void FeedlyProvider::getTokens(){
                 parsingSuccesful = reader.parse(tokenFile, root);
                 if(parsingSuccesful){
                         userData["userAccessToken"] = (root["access_token"]).asString();
+                        userData["userRefreshToken"] = (root["refresh_token"]).asString();
+                        userData["userID"] = (root["id"]).asString();
                 }
         }
 
-        if(!parsingSuccesful || curl_res != CURLE_OK){
+        if(!parsingSuccesful)
                 cerr << "Failed to parse tokens file: " << reader.getFormatedErrorMessages() << endl;
+        if(curl_res != CURLE_OK)
                 fprintf(stderr, "curl_easy_perform() failed : %s\n", curl_easy_strerror(curl_res));
-        }
         curl_easy_cleanup(curl);
 
 
@@ -127,7 +131,8 @@ void FeedlyProvider::getCookies(FILE* temp){
         curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "cookie");
         curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "cookie");
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, temp);
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+        if(verboseFlag)
+                curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
         curl_res = curl_easy_perform(curl);
 
         curl_easy_setopt(curl, CURLOPT_REFERER, string(GOOGLE_AUTH_URL).c_str());

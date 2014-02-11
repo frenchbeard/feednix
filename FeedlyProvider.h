@@ -9,7 +9,7 @@ using namespace std;
 class FeedlyProvider{
         public:
                 FeedlyProvider();
-                string getAuthCode(const string& email, const string& passwd);
+                string authenticateUser(const string& email, const string& passwd);
                 void giveAll();
                 void giveUnread();
                 void giveSaved();
@@ -17,7 +17,7 @@ class FeedlyProvider{
                 void giveLabels();
                 void searchUserFeeds();
                 void giveSingleEntry();
-                void getTokens();
+                void parseAuthenticationResponse();
                 void getCookies(FILE*);
         private:
                 CURL *curl;
@@ -26,6 +26,7 @@ class FeedlyProvider{
                 string userAuthCode;
                 string extract_galx_value();
                 map<string, string> userData;
+                bool verboseFlag;
                 #define FEEDLY_URI "https://sandbox.feedly.com/v3/"
                 #define CLIENT_ID "&client_id=sandbox"
                 #define CLIENT_SECRET "&client_secret=CM786L1D4P3M9VYUPOB8"
