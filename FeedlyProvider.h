@@ -7,7 +7,7 @@ using namespace std;
 class FeedlyProvider{
         public:
                 FeedlyProvider();
-                string getAuthCode();
+                string getAuthCode(const string& email, const string& passwd);
                 void giveAll();
                 void giveUnread();
                 void giveSaved();
@@ -16,10 +16,12 @@ class FeedlyProvider{
                 void searchUserFeeds();
                 void giveSingleEntry();
                 const char* getTokens();
+                void getCookies(FILE*);
         private:
                 CURL *curl;
                 CURLcode curl_res;
                 const char* feedly_url;
+                string userAuthCode;
                 string extract_galx_value();
                 #define FEEDLY_URI "https://sandbox.feedly.com/v3/"
                 #define CLIENT_ID "client_id=sandbox"

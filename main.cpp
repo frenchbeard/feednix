@@ -8,7 +8,7 @@ int main(int argc, char **argv)
 {
         FeedlyProvider provider;
 
-        cout << provider.getAuthCode() << endl;
+        cout << provider.getAuthCode("jorgemartinezhernandez", "trueforerunner117") << endl;
         return 0;
 }
 
