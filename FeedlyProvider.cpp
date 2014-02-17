@@ -3,8 +3,8 @@
 #include <curl/curl.h>
 #include <stdio.h>
 #include <fstream>
-//#include <jsoncpp/json/json.h>
-
+#include <jsoncpp/json/json.h>
+//#include <json/json.h>
 using namespace std;
 
 #include "FeedlyProvider.h"
@@ -28,7 +28,7 @@ string FeedlyProvider::getAuthCode(const string& email, const string& passwd){
         curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "cookie");
         curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "cookie");
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, temp);
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+//        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
         curl_res = curl_easy_perform(curl);
 
         curl_easy_setopt(curl, CURLOPT_REFERER, string(GOOGLE_AUTH_URL).c_str());
@@ -47,7 +47,7 @@ string FeedlyProvider::getAuthCode(const string& email, const string& passwd){
                 if((curl_res == CURLE_OK) && currentURL){
                         unsigned codeIndex = tempCode.find("code=") + 5;
                         code = tempCode.substr(codeIndex, (tempCode.find("&", codeIndex) - codeIndex));
-
+                        userData["userAuthCode"] = code;
                         curl_easy_cleanup(curl);
                         return code;
                 }
@@ -59,36 +59,40 @@ string FeedlyProvider::getAuthCode(const string& email, const string& passwd){
 
 
 }
-const char* FeedlyProvider::getTokens(){
+void FeedlyProvider::getTokens(){
 
         struct curl_httppost *formpost = NULL;
-        FILE *tokenJSON;
+        FILE *tokenJSON = fopen("tokenFile.json", "wb");
 
-        feedly_url = (FEEDLY_URI + string("auth/token?code=") + FeedlyProvider::userAuthCode +  CLIENT_ID +  CLIENT_SECRET +  REDIRECT_URI + SCOPE + "&gran_type=authorization_code").c_str();
-        curl_easy_setopt(curl, CURLOPT_URL, feedly_url);
+        curl = curl_easy_init();
+
+        feedly_url = FEEDLY_URI + string("auth/token?code=") + userData["userAuthCode"] +  CLIENT_ID +  CLIENT_SECRET +  REDIRECT_URI + SCOPE + "&grant_type=authorization_code";
+
+        curl_easy_setopt(curl, CURLOPT_URL, feedly_url.c_str());
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, true);
         curl_easy_setopt(curl, CURLOPT_AUTOREFERER, true);
         curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, tokenJSON);
         curl_res = curl_easy_perform(curl);
-
-        tokenJSON - fopen("tokenFile.json", "wb");
-
-        if(tokenJSON == NULL){
-                curl_easy_cleanup(curl);
-                return "";
+        bool parsingSuccesful;
+        fclose(tokenJSON);
+        Json::Value root;
+        Json::Reader reader;
+        ifstream tokenFile;
+        tokenFile.open("tokenFile.json");
+        if(tokenJSON != NULL && curl_res == CURLE_OK){
+                parsingSuccesful = reader.parse(tokenFile, root);
+                if(parsingSuccesful){
+                        userData["userAccessToken"] = (root["access_token"]).asString();
+                }
         }
 
-        //Perfomr request
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, tokenJSON);
-
-        curl_res = curl_easy_perform(curl);
-
-        if(curl_res != CURLE_OK){
+        if(!parsingSuccesful || curl_res != CURLE_OK){
+                cerr << "Failed to parse tokens file: " << reader.getFormatedErrorMessages() << endl;
                 fprintf(stderr, "curl_easy_perform() failed : %s\n", curl_easy_strerror(curl_res));
         }
-
-        fclose(tokenJSON);
         curl_easy_cleanup(curl);
+
 
 } 
 void FeedlyProvider::giveAll(){
@@ -125,8 +129,6 @@ void FeedlyProvider::getCookies(FILE* temp){
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, temp);
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
         curl_res = curl_easy_perform(curl);
-
-        cout << extract_galx_value() << endl;
 
         curl_easy_setopt(curl, CURLOPT_REFERER, string(GOOGLE_AUTH_URL).c_str());
         curl_easy_setopt(curl, CURLOPT_POST, 1);

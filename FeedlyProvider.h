@@ -2,6 +2,8 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <map>
+
 using namespace std;
 
 class FeedlyProvider{
@@ -15,17 +17,18 @@ class FeedlyProvider{
                 void giveLabels();
                 void searchUserFeeds();
                 void giveSingleEntry();
-                const char* getTokens();
+                void getTokens();
                 void getCookies(FILE*);
         private:
                 CURL *curl;
                 CURLcode curl_res;
-                const char* feedly_url;
+                string feedly_url;
                 string userAuthCode;
                 string extract_galx_value();
+                map<string, string> userData;
                 #define FEEDLY_URI "https://sandbox.feedly.com/v3/"
-                #define CLIENT_ID "client_id=sandbox"
-                #define CLIENT_SECRET "client_secret=QNFQRFCFM1IQCJB367ON"
+                #define CLIENT_ID "&client_id=sandbox"
+                #define CLIENT_SECRET "&client_secret=CM786L1D4P3M9VYUPOB8"
                 #define REDIRECT_URI "&redirect_uri=http://localhost"
                 #define SCOPE "&scope=https://cloud.feedly.com/subscriptions"
                 #define RESPONSE_TYPE "code"
