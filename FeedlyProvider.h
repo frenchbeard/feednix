@@ -9,16 +9,17 @@ using namespace std;
 class FeedlyProvider{
         public:
                 FeedlyProvider();
-                string authenticateUser(const string& email, const string& passwd);
+                void authenticateUser(const string& email, const string& passwd);
                 void giveAll();
                 void giveUnread();
                 void giveSaved();
                 void giveTopics();
+                void getProfile();
                 void giveLabels();
                 void searchUserFeeds();
                 void giveSingleEntry();
                 void parseAuthenticationResponse();
-                void getCookies(FILE*);
+                void getCookies();
         private:
                 CURL *curl;
                 CURLcode curl_res;
@@ -27,9 +28,10 @@ class FeedlyProvider{
                 string extract_galx_value();
                 map<string, string> userData;
                 bool verboseFlag;
+                void isVerbose();
                 #define FEEDLY_URI "https://sandbox.feedly.com/v3/"
                 #define CLIENT_ID "&client_id=sandbox"
-                #define CLIENT_SECRET "&client_secret=CM786L1D4P3M9VYUPOB8"
+                #define CLIENT_SECRET "&client_secret=W60IW73DYSUIISZX4OUP"
                 #define REDIRECT_URI "&redirect_uri=http://localhost"
                 #define SCOPE "&scope=https://cloud.feedly.com/subscriptions"
                 #define RESPONSE_TYPE "code"

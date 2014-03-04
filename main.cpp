@@ -8,8 +8,8 @@ int main(int argc, char **argv)
 {
         FeedlyProvider provider;
 
-        cout << provider.authenticateUser("jorgemartinezhernandez", "trueforerunner117") << endl;
-        provider.parseAuthenticationResponse();
+        provider.authenticateUser("jorgemartinezhernandez", "trueforerunner117");
+        provider.giveAll();
         return 0;
 }
 
