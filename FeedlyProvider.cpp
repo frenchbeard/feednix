@@ -1,11 +1,11 @@
-#include <iostream>
-#include <string>
-#include <curl/curl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <fstream>
 #include <jsoncpp/json/json.h>
-//#include <json/json.h>
+#include <vector>
+#include <iterator>
+#include <istream>
+#include <sstream>
+
 using namespace std;
 
 #include "FeedlyProvider.h"
@@ -14,6 +14,7 @@ FeedlyProvider::FeedlyProvider(){
 
         curl_global_init(CURL_GLOBAL_DEFAULT);
         verboseFlag = false;
+        system("rm cookie");
 }
 
 void FeedlyProvider::authenticateUser(const string& email, const string& passwd){
@@ -31,7 +32,7 @@ void FeedlyProvider::authenticateUser(const string& email, const string& passwd)
         curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "cookie");
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, data_holder);
 
-        isVerbose();
+        enableVerbose();
 
         curl_res = curl_easy_perform(curl);
 
@@ -59,7 +60,7 @@ void FeedlyProvider::authenticateUser(const string& email, const string& passwd)
                 }
         }
 
-        cerr << "Could not authenticate user" << endl;
+        cerr << "ERROR: Could not authenticate user" << endl;
         fprintf(stderr, "curl_easy_perform() failed : %s\n", curl_easy_strerror(curl_res));
 
         curl_easy_cleanup(curl);
@@ -80,7 +81,7 @@ void FeedlyProvider::parseAuthenticationResponse(){
         curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, tokenJSON);
 
-        isVerbose();
+        enableVerbose();
 
         curl_res = curl_easy_perform(curl);
 
@@ -103,30 +104,55 @@ void FeedlyProvider::parseAuthenticationResponse(){
         }
 
         if(!parsingSuccesful)
-                cerr << "Failed to parse tokens file: " << reader.getFormatedErrorMessages() << endl;
+                cerr << "ERROR: Failed to parse tokens file: " << reader.getFormatedErrorMessages() << endl;
         if(curl_res != CURLE_OK)
                 fprintf(stderr, "curl_easy_perform() failed : %s\n", curl_easy_strerror(curl_res));
+
         curl_easy_cleanup(curl);
 
         system("rm temp.txt");
 
 } 
-void FeedlyProvider::giveAll(){
+void FeedlyProvider::giveAllUnread(){
         struct curl_slist *chunk = NULL;
         FILE* data_holder = fopen("temp.txt", "wb");
         chunk = curl_slist_append(chunk, ("Authorization: OAuth " + userData["userAccessToken"]).c_str());
 
         curl = curl_easy_init();
-        curl_easy_setopt(curl, CURLOPT_URL, (string(FEEDLY_URI) + "mixes/contents?streamId=" + curl_easy_escape(curl, ("user/"+ userData["userID"] + "/category/global.all").c_str(), 0)).c_str());
+        curl_easy_setopt(curl, CURLOPT_URL, (string(FEEDLY_URI) + "streams/contents?unreadOnly=true&streamId=" + curl_easy_escape(curl, ("user/"+ userData["userID"] + "/category/global.all").c_str(), 0)).c_str());
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, true);
         curl_easy_setopt(curl, CURLOPT_AUTOREFERER, true);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, data_holder);
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
 
-        isVerbose();
+        enableVerbose();
 
         curl_res = curl_easy_perform(curl);
+
+        Json::Reader reader;
+        Json::Value root;
+
         fclose(data_holder);
+
+        bool parsingSuccesful;
+
+        ifstream data;
+        data.open("temp.txt");
+        parsingSuccesful = reader.parse(data, root);
+
+        if(data != NULL && curl_res == CURLE_OK && parsingSuccesful && root["items"].size() > 0){
+                string id;
+
+                for(int i = 0; i < root["items"].size(); i++){
+                        id = (root["items"][i]["id"]).asString();
+
+                        feeds[(root["items"][i]["id"]).asString()].content = root["items"][i]["summary"]["content"].asString();
+                        feeds[(root["items"][i]["id"]).asString()].title = root["items"][i]["title"].asString();
+                }
+        }
+        else{
+                cerr << "ERROR: Failed to Retrive Feeds" << endl;
+        }
 }
 void getProfile(){
         Json::Value root;
@@ -165,7 +191,7 @@ void FeedlyProvider::getCookies(){
         curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "cookie");
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, data_holder);
 
-        isVerbose();
+        enableVerbose();
 
         curl_res = curl_easy_perform(curl);
 
@@ -177,7 +203,7 @@ void FeedlyProvider::getCookies(){
 
         curl_easy_cleanup(curl);
 }
-void FeedlyProvider::isVerbose(){
+void FeedlyProvider::enableVerbose(){
         if(verboseFlag)
                 curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
 }

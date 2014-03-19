@@ -9,7 +9,7 @@ int main(int argc, char **argv)
         FeedlyProvider provider;
 
         provider.authenticateUser("jorgemartinezhernandez", "trueforerunner117");
-        provider.giveAll();
+        provider.giveAllUnread();
         return 0;
 }
 

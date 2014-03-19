@@ -2,7 +2,9 @@
 #include <string>
 #include <iostream>
 #include <fstream>
-#include <map>
+#include <unordered_map>
+#include <jsoncpp/json/json.h>
+
 
 using namespace std;
 
@@ -10,8 +12,7 @@ class FeedlyProvider{
         public:
                 FeedlyProvider();
                 void authenticateUser(const string& email, const string& passwd);
-                void giveAll();
-                void giveUnread();
+                void giveAllUnread();
                 void giveSaved();
                 void giveTopics();
                 void getProfile();
@@ -26,9 +27,14 @@ class FeedlyProvider{
                 string feedly_url;
                 string userAuthCode;
                 string extract_galx_value();
-                map<string, string> userData;
+                unordered_map<string, string> userData;
                 bool verboseFlag;
-                void isVerbose();
+                void enableVerbose();
+                struct post_data{
+                        string content;
+                        string title;
+                };
+                map<string, post_data> feeds;
                 #define FEEDLY_URI "https://sandbox.feedly.com/v3/"
                 #define CLIENT_ID "&client_id=sandbox"
                 #define CLIENT_SECRET "&client_secret=W60IW73DYSUIISZX4OUP"
