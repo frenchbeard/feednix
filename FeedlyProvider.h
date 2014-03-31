@@ -27,6 +27,14 @@ class FeedlyProvider{
                 string feedly_url;
                 string userAuthCode;
                 string extract_galx_value();
+                struct UserData{
+                        map<string, string> categories;
+                        string id;
+                        string code;
+                        string authToken;
+                        string refreshToken;
+                };
+                UserData user_data;
                 unordered_map<string, string> userData;
                 bool verboseFlag;
                 void enableVerbose();
@@ -35,9 +43,10 @@ class FeedlyProvider{
                         string title;
                 };
                 map<string, post_data> feeds;
+                void curl_retrive(const string&);
                 #define FEEDLY_URI "https://sandbox.feedly.com/v3/"
                 #define CLIENT_ID "&client_id=sandbox"
-                #define CLIENT_SECRET "&client_secret=W60IW73DYSUIISZX4OUP"
+                #define CLIENT_SECRET "&client_secret=V0H9C3O75ODIXFSSX9OH"
                 #define REDIRECT_URI "&redirect_uri=http://localhost"
                 #define SCOPE "&scope=https://cloud.feedly.com/subscriptions"
                 #define RESPONSE_TYPE "code"
