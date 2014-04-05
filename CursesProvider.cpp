@@ -1,8 +1,10 @@
 #include <curses.h>
+#include <map>
 #include <panel.h>
 #include <menu.h> 
 #include <string.h>
 #include <stdio.h>
+#include <iostream>
 
 #include "CursesProvider.h"
 
@@ -22,12 +24,12 @@ char *choices[] = {
 CursesProvider::CursesProvider(){
 }
 
-void CursesProvider::create_menu(){
+void CursesProvider::create_menu(const map<string, string> *labels){
         ITEM **my_items;
         int c;                          
         MENU *my_menu;
         WINDOW *my_menu_win;
-        int n_choices, i;
+        int n_choices, i = 0;
 
         initscr();
         start_color();
@@ -37,12 +39,15 @@ void CursesProvider::create_menu(){
         init_pair(1, COLOR_RED, COLOR_BLACK);
 
         /* Create items */
-        n_choices = ARRAY_SIZE(choices);
-        my_items = (ITEM **)calloc(n_choices, sizeof(ITEM *));
+        n_choices = labels->size();
+        my_items = (ITEM **)calloc(sizeof(std::map<string, string>::value_type)*n_choices, sizeof(ITEM *));
 
-        for(i = 0; i < n_choices; i++)
-                my_items[i] = new_item(choices[i], "");
-
+        for(std::map<string, string>::const_iterator it = labels->begin(); it != labels->end(); ++it){
+                cout << it->first << endl;
+                my_items[i] = new_item((it->first).c_str(), "");
+                i++;
+        }
+        i = 0;
         my_menu = new_menu((ITEM **)my_items);
 
         my_menu_win = newwin(10, 40, 0, 0);
@@ -70,17 +75,17 @@ void CursesProvider::create_menu(){
         while((c = wgetch(my_menu_win)) != KEY_F(1)){
                 switch(c){
                         case KEY_DOWN:
-                        menu_driver(my_menu, REQ_DOWN_ITEM);
-                        break;
+                                menu_driver(my_menu, REQ_DOWN_ITEM);
+                                break;
                         case KEY_UP:
-                        menu_driver(my_menu, REQ_UP_ITEM);
-                        break;
+                                menu_driver(my_menu, REQ_UP_ITEM);
+                                break;
                         case 'j':
-                        menu_driver(my_menu, REQ_DOWN_ITEM);
-                        break;
+                                menu_driver(my_menu, REQ_DOWN_ITEM);
+                                break;
                         case 'k':
-                        menu_driver(my_menu, REQ_UP_ITEM);
-                        break;
+                                menu_driver(my_menu, REQ_UP_ITEM);
+                                break;
                 }
                 wrefresh(my_menu_win);
         }       

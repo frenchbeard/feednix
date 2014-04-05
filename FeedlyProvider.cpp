@@ -138,7 +138,29 @@ void FeedlyProvider::giveAllUnread(){
         }
         data.close();
 }
-void FeedlyProvider::giveLabels(){
+const map<string, string>* FeedlyProvider::giveLabels(){
+        curl_retrive("categories");
+
+        Json::Reader reader;
+        Json::Value root;
+
+        bool parsingSuccesful;
+        //ifstream data;
+        //data.open("temp.txt");
+        std::ifstream data("temp.txt", std::ifstream::binary);
+        parsingSuccesful = reader.parse(data, root);
+
+        if(data == NULL || curl_res != CURLE_OK || !parsingSuccesful){
+                cerr << "ERROR: Failed to Retrive Categories" << endl;
+                return NULL;
+
+        }
+        for(int i = 0; i < root.size(); i++){
+                user_data.categories[(root[i]["label"]).asString()] = root[i]["id"].asString();
+        }
+        return &(user_data.categories);
+}
+/*void FeedlyProvider::giveLabels(){
         curl_retrive("categories");
 
         Json::Reader reader;
@@ -167,7 +189,7 @@ void FeedlyProvider::giveLabels(){
 void getProfile(){
         Json::Value root;
         Json::Reader reader;
-}
+}*/
 string FeedlyProvider::extract_galx_value(){
 
         string l;
