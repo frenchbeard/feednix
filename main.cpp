@@ -13,6 +13,7 @@ int main(int argc, char **argv)
         feedly.authenticateUser("jorgemartinezhernandez", "trueforerunner117");
         feedly.giveAllUnread();
         curses.create_menu(feedly.giveLabels());
+        feedly.curl_cleanup();
         return 0;
 }
 

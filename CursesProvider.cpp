@@ -11,16 +11,6 @@
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 #define CTRLD   4
 
-
-char *choices[] = {
-        "Choice 1",
-        "Choice 2",
-        "Choice 3",
-        "Choice 4",
-        "Exit",
-        (char *)NULL,
-};
-
 CursesProvider::CursesProvider(){
 }
 
@@ -43,11 +33,10 @@ void CursesProvider::create_menu(const map<string, string> *labels){
         my_items = (ITEM **)calloc(sizeof(std::map<string, string>::value_type)*n_choices, sizeof(ITEM *));
 
         for(std::map<string, string>::const_iterator it = labels->begin(); it != labels->end(); ++it){
-                cout << it->first << endl;
                 my_items[i] = new_item((it->first).c_str(), "");
                 i++;
         }
-        i = 0;
+
         my_menu = new_menu((ITEM **)my_items);
 
         my_menu_win = newwin(10, 40, 0, 0);

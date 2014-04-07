@@ -26,12 +26,12 @@ class FeedlyProvider{
                 const map<string, string>* giveLabels();
                 void parseAuthenticationResponse();
                 void getCookies();
+                void curl_cleanup();
         private:
                 CURL *curl;
                 CURLcode curl_res;
                 string feedly_url;
                 string userAuthCode;
-                void extract_galx_value();
                 struct UserData{
                         map<string, string> categories;
                         string id;
@@ -40,14 +40,16 @@ class FeedlyProvider{
                         string refreshToken;
                         string galx;
                 };
-                UserData user_data;
-                bool verboseFlag;
-                void enableVerbose();
                 struct post_data{
                         string content;
                         string title;
                 };
+                UserData user_data;
+                bool verboseFlag;
                 map<string, post_data> feeds;
+                void enableVerbose();
                 void curl_retrive(const string&);
+                void extract_galx_value();
 };
+
 #endif

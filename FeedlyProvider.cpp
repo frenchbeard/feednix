@@ -1,17 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <jsoncpp/json/json.h>
-#include <vector>
 #include <iterator>
 #include <istream>
-#include <sstream>
 
 using namespace std;
 
 #include "FeedlyProvider.h"
 
 FeedlyProvider::FeedlyProvider(){
-
         curl_global_init(CURL_GLOBAL_DEFAULT);
         verboseFlag = false;
 }
@@ -64,8 +61,8 @@ void FeedlyProvider::authenticateUser(const string& email, const string& passwd)
         curl_easy_cleanup(curl);
         fclose(data_holder);
 }
-void FeedlyProvider::parseAuthenticationResponse(){
 
+void FeedlyProvider::parseAuthenticationResponse(){
         struct curl_httppost *formpost = NULL;
         FILE *tokenJSON = fopen("tokenFile.json", "wb");
 
@@ -110,6 +107,7 @@ void FeedlyProvider::parseAuthenticationResponse(){
         system("rm temp.txt");
 
 } 
+
 void FeedlyProvider::giveAllUnread(){
         curl_retrive("streams/contents?unreadOnly=true&streamId=" + string(curl_easy_escape(curl, ("user/"+ user_data.id + "/category/global.all").c_str(), 0)));
         Json::Reader reader;
@@ -135,6 +133,7 @@ void FeedlyProvider::giveAllUnread(){
         }
         data.close();
 }
+
 const map<string, string>* FeedlyProvider::giveLabels(){
 
         curl_retrive("categories");
@@ -147,10 +146,9 @@ const map<string, string>* FeedlyProvider::giveLabels(){
         ifstream data("temp.txt", ifstream::binary);
         parsingSuccesful = reader.parse(data, root);
 
-        if(data == NULL || curl_res != CURLE_OK || !parsingSuccesful){
+        if(data == NULL || curl_res != CURLE_OK || !parsingSuccesful || root[0u].size() <= 0){
                 cerr << "ERROR: Failed to Retrive Categories" << endl;
                 return NULL;
-
         }
 
         for(int i = 0; i < root.size(); i++)
@@ -158,15 +156,16 @@ const map<string, string>* FeedlyProvider::giveLabels(){
 
         return &(user_data.categories);
 }
+
 void FeedlyProvider::extract_galx_value(){
 
         string l;
-        ifstream temp("temp.txt");
-        unsigned int index, last;
+        ifstream temp("cookie");
+        size_t index , last;
 
         if(temp.is_open()){
                 while(getline(temp, l)){
-                        index = l.find("GALX");
+                        index = l.rfind("GALX");
 
                         if(index > 0 && index != string::npos){
                                 last = l.find("X") + 2;
@@ -179,6 +178,7 @@ void FeedlyProvider::extract_galx_value(){
         temp.close();
         return;
 }
+
 void FeedlyProvider::getCookies(){
 
         FILE* data_holder = fopen("temp.txt", "wb");
@@ -196,7 +196,11 @@ void FeedlyProvider::getCookies(){
         enableVerbose();
 
         curl_res = curl_easy_perform(curl);
+        curl_easy_cleanup(curl);
 
+        curl = curl_easy_init();
+
+        extract_galx_value();
         curl_easy_setopt(curl, CURLOPT_REFERER, string(GOOGLE_AUTH_URL).c_str());
         curl_easy_setopt(curl, CURLOPT_POST, 1);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, string("signIn=Sign+in&_utf8=&#9731;&bgresponse=js_disabled&GALX=" + user_data.galx + "&pstMsg=&dnCon=&checkConnection=youtube:1141:1&checkedDomains=youtube&Email=jorgemartinezhernandez&Passwd=trueforerunner117").c_str());
@@ -205,13 +209,14 @@ void FeedlyProvider::getCookies(){
 
         curl_easy_cleanup(curl);
         fclose(data_holder);
-}
-void FeedlyProvider::enableVerbose(){
 
+}
+
+void FeedlyProvider::enableVerbose(){
         if(verboseFlag)
                 curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
-
 }
+
 void FeedlyProvider::curl_retrive(const string& uri){
 
         struct curl_slist *chunk = NULL;
@@ -231,4 +236,8 @@ void FeedlyProvider::curl_retrive(const string& uri){
         curl_res = curl_easy_perform(curl);
 
         fclose(data_holder);
+}
+
+void FeedlyProvider::curl_cleanup(){
+        curl_global_cleanup();
 }
