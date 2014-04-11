@@ -14,7 +14,6 @@ FeedlyProvider::FeedlyProvider(){
 }
 
 void FeedlyProvider::authenticateUser(const string& email, const string& passwd){
-
         getCookies();
 
         FILE* data_holder = fopen("temp.txt", "wb");
@@ -53,7 +52,6 @@ void FeedlyProvider::authenticateUser(const string& email, const string& passwd)
                 }
         }
         else{
-
                 cerr << "ERROR: Could not authenticate user" << endl;
                 fprintf(stderr, "curl_easy_perform() failed : %s\n", curl_easy_strerror(curl_res));
         }
@@ -105,7 +103,7 @@ void FeedlyProvider::parseAuthenticationResponse(){
 
         curl_easy_cleanup(curl);
         system("rm temp.txt");
-
+        system("rm tokenFile.json");
 } 
 
 void FeedlyProvider::giveAllUnread(){
@@ -134,8 +132,7 @@ void FeedlyProvider::giveAllUnread(){
         data.close();
 }
 
-const map<string, string>* FeedlyProvider::giveLabels(){
-
+const map<string, string>* FeedlyProvider::getLabels(){
         curl_retrive("categories");
 
         Json::Reader reader;
@@ -146,7 +143,7 @@ const map<string, string>* FeedlyProvider::giveLabels(){
         ifstream data("temp.txt", ifstream::binary);
         parsingSuccesful = reader.parse(data, root);
 
-        if(data == NULL || curl_res != CURLE_OK || !parsingSuccesful || root[0u].size() <= 0){
+        if(data == NULL || curl_res != CURLE_OK || !parsingSuccesful){
                 cerr << "ERROR: Failed to Retrive Categories" << endl;
                 return NULL;
         }
@@ -157,8 +154,31 @@ const map<string, string>* FeedlyProvider::giveLabels(){
         return &(user_data.categories);
 }
 
-void FeedlyProvider::extract_galx_value(){
+const map<string, PostData>* FeedlyProvider::giveCategoryPosts(const string& category){
+        curl_retrive("streams/" + string(curl_easy_escape(curl, user_data.categories["Another"].c_str(), 0)) + "/contents");
 
+        Json::Reader reader;
+        Json::Value root;
+
+        bool parsingSuccesful;
+
+        ifstream data("temp.txt", ifstream::binary);
+        parsingSuccesful = reader.parse(data, root);
+
+        if(data == NULL || curl_res != CURLE_OK || !parsingSuccesful){ 
+                cerr << "ERROR: Failed to Retrive Categories" << endl;
+                return NULL;
+        }
+        
+        for(int i = 0; i < root["items"].size(); i++){
+                catPosts[root["items"][i]["id"].asString()] = PostData{root["items"][i]["title"].asString(), root["items"][i]["summary"]["content"].asString()};
+        }
+
+        return &(catPosts);
+                
+}
+
+void FeedlyProvider::extract_galx_value(){
         string l;
         ifstream temp("cookie");
         size_t index , last;
@@ -180,7 +200,6 @@ void FeedlyProvider::extract_galx_value(){
 }
 
 void FeedlyProvider::getCookies(){
-
         FILE* data_holder = fopen("temp.txt", "wb");
 
         curl = curl_easy_init();
@@ -218,7 +237,6 @@ void FeedlyProvider::enableVerbose(){
 }
 
 void FeedlyProvider::curl_retrive(const string& uri){
-
         struct curl_slist *chunk = NULL;
 
         FILE* data_holder = fopen("temp.txt", "wb");

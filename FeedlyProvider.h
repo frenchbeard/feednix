@@ -18,35 +18,39 @@ using namespace std;
 #ifndef _PROVIDER_H_
 #define _PROVIDER_H_
 
+struct UserData{
+        map<string, string> categories;
+        string id;
+        string code;
+        string authToken;
+        string refreshToken;
+        string galx;
+};
+
+struct PostData{
+        string content;
+        string title;
+};
+
 class FeedlyProvider{
         public:
                 FeedlyProvider();
                 void authenticateUser(const string& email, const string& passwd);
                 void giveAllUnread();
-                const map<string, string>* giveLabels();
                 void parseAuthenticationResponse();
                 void getCookies();
                 void curl_cleanup();
+                const map<string, PostData>* giveCategoryPosts(const string& category);
+                const map<string, string>* getLabels();
         private:
                 CURL *curl;
                 CURLcode curl_res;
                 string feedly_url;
                 string userAuthCode;
-                struct UserData{
-                        map<string, string> categories;
-                        string id;
-                        string code;
-                        string authToken;
-                        string refreshToken;
-                        string galx;
-                };
-                struct post_data{
-                        string content;
-                        string title;
-                };
                 UserData user_data;
                 bool verboseFlag;
-                map<string, post_data> feeds;
+                map<string, PostData> feeds;
+                map<string, PostData> catPosts;
                 void enableVerbose();
                 void curl_retrive(const string&);
                 void extract_galx_value();

@@ -11,8 +11,9 @@ int main(int argc, char **argv)
         FeedlyProvider feedly;
 
         feedly.authenticateUser("jorgemartinezhernandez", "trueforerunner117");
-        feedly.giveAllUnread();
-        curses.create_menu(feedly.giveLabels());
+        //curses.create_menu(feedly.giveLabels());
+        feedly.getLabels();
+        feedly.giveCategoryPosts("Another");
         feedly.curl_cleanup();
         return 0;
 }
