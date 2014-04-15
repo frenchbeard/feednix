@@ -7,12 +7,13 @@ using namespace std;
 
 int main(int argc, char **argv)
 {
-        CursesProvider curses;
         FeedlyProvider feedly;
-
         feedly.authenticateUser("jorgemartinezhernandez", "trueforerunner117");
-        //curses.create_menu(feedly.giveLabels());
-        feedly.getLabels();
+
+        CursesProvider curses(feedly.getLabels());
+
+        //feedly.getLabel();
+        curses.init();
         feedly.giveCategoryPosts("Another");
         feedly.curl_cleanup();
         return 0;

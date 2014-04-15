@@ -19,6 +19,7 @@ void FeedlyProvider::authenticateUser(const string& email, const string& passwd)
         FILE* data_holder = fopen("temp.txt", "wb");
 
         curl = curl_easy_init();
+
         curl_easy_setopt(curl, CURLOPT_URL, string(GOOGLE_AUTH_URL).c_str()); 
         curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/4.0");
         curl_easy_setopt(curl, CURLOPT_AUTOREFERER, 1 );
