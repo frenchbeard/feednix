@@ -8,21 +8,26 @@ using namespace std;
 #ifndef _CURSES_H
 #define _CURSES_H
 
+#include "FeedlyProvider.h"
+
 class CursesProvider{
         public:
-                CursesProvider(const map<string, string> *categories);
+                CursesProvider();
                 void init();
         private:
+                FeedlyProvider feedly;
                 const map<string, string> *labels;
                 WINDOW *main_wins[2];
                 PANEL  *main_pans[2];
                 PANEL  *top;
-                ITEM **my_items;
-                MENU *my_menu;
-                void create_menu(); 
+                ITEM **ctg_items, **posts_items;
+                MENU *ctg_menu, *posts_menu;
+                void create_categories_menu(); 
+                void create_posts_menu(); 
                 void win_show(WINDOW *win, char *label, int label_color);
                 void print_in_middle(WINDOW *win, int starty, int startx, int width, char *string, chtype color);
                 void cleanup();
+                void ctg_menu_callback(char* label);
 };
 
 #endif

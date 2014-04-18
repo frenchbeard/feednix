@@ -107,7 +107,7 @@ void FeedlyProvider::parseAuthenticationResponse(){
         system("rm tokenFile.json");
 } 
 
-void FeedlyProvider::giveAllUnread(){
+const map<string, PostData>* FeedlyProvider::giveAllUnread(){
         curl_retrive("streams/contents?unreadOnly=true&streamId=" + string(curl_easy_escape(curl, ("user/"+ user_data.id + "/category/global.all").c_str(), 0)));
         Json::Reader reader;
         Json::Value root;
@@ -131,6 +131,7 @@ void FeedlyProvider::giveAllUnread(){
                 cerr << "ERROR: Failed to Retrive Feeds" << endl;
         }
         data.close();
+        return &(feeds);
 }
 
 const map<string, string>* FeedlyProvider::getLabels(){
@@ -156,7 +157,8 @@ const map<string, string>* FeedlyProvider::getLabels(){
 }
 
 const map<string, PostData>* FeedlyProvider::giveCategoryPosts(const string& category){
-        curl_retrive("streams/" + string(curl_easy_escape(curl, user_data.categories["Another"].c_str(), 0)) + "/contents");
+        catPosts.clear(); 
+        curl_retrive("streams/" + string(curl_easy_escape(curl, user_data.categories[category].c_str(), 0)) + "/contents?unreadOnly=true");
 
         Json::Reader reader;
         Json::Value root;
@@ -172,7 +174,7 @@ const map<string, PostData>* FeedlyProvider::giveCategoryPosts(const string& cat
         }
         
         for(int i = 0; i < root["items"].size(); i++){
-                catPosts[root["items"][i]["id"].asString()] = PostData{root["items"][i]["title"].asString(), root["items"][i]["summary"]["content"].asString()};
+                catPosts[root["items"][i]["id"].asString()] = PostData{root["items"][i]["summary"]["content"].asString(), root["items"][i]["title"].asString()};
         }
 
         return &(catPosts);

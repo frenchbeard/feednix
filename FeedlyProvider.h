@@ -36,7 +36,7 @@ class FeedlyProvider{
         public:
                 FeedlyProvider();
                 void authenticateUser(const string& email, const string& passwd);
-                void giveAllUnread();
+                const map<string, PostData>* giveAllUnread();
                 void parseAuthenticationResponse();
                 void getCookies();
                 void curl_cleanup();

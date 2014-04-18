@@ -2,20 +2,14 @@
 
 using namespace std;
 
-#include "FeedlyProvider.h"
 #include "CursesProvider.h"
 
 int main(int argc, char **argv)
 {
-        FeedlyProvider feedly;
-        feedly.authenticateUser("jorgemartinezhernandez", "trueforerunner117");
 
-        CursesProvider curses(feedly.getLabels());
+        CursesProvider curses;
 
-        //feedly.getLabel();
         curses.init();
-        feedly.giveCategoryPosts("Another");
-        feedly.curl_cleanup();
         return 0;
 }
 
