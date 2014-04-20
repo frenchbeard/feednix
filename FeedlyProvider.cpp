@@ -158,7 +158,7 @@ const map<string, string>* FeedlyProvider::getLabels(){
 
 const map<string, PostData>* FeedlyProvider::giveCategoryPosts(const string& category){
         catPosts.clear(); 
-        curl_retrive("streams/" + string(curl_easy_escape(curl, user_data.categories[category].c_str(), 0)) + "/contents?unreadOnly=true");
+        curl_retrive("streams/" + string(curl_easy_escape(curl, user_data.categories[category].c_str(), 0)) + "/contents?unreadOnly=true&count=35");
 
         Json::Reader reader;
         Json::Value root;

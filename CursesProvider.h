@@ -17,7 +17,8 @@ class CursesProvider{
         private:
                 FeedlyProvider feedly;
                 const map<string, string> *labels;
-                WINDOW *main_wins[2];
+                WINDOW *ctg_win;
+                WINDOW *posts_win;
                 PANEL  *main_pans[2];
                 PANEL  *top;
                 ITEM **ctg_items, **posts_items;

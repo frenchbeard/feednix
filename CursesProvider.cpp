@@ -14,19 +14,21 @@
 
 CursesProvider::CursesProvider(){
         feedly.authenticateUser("jorgemartinezhernandez", "trueforerunner117");
+
         initscr();
         start_color();
         cbreak();
         noecho();
         keypad(stdscr, TRUE);
-        labels = feedly.getLabels();
         curs_set(0);
+
+        labels = feedly.getLabels();
 }
 void CursesProvider::init(){
         int ch;
 
         /* Initialize all the colors */
-        init_pair(1, COLOR_RED, COLOR_BLACK);
+        init_pair(1, COLOR_RED, 0);
         init_pair(2, COLOR_GREEN, COLOR_BLACK);
         init_pair(3, COLOR_BLUE, COLOR_BLACK);
         init_pair(4, COLOR_CYAN, COLOR_BLACK);
@@ -35,8 +37,8 @@ void CursesProvider::init(){
         create_posts_menu();
 
         /* Attach a panel to each window */     /* Order is bottom up */
-        main_pans[0] = new_panel(main_wins[0]);   /* Push 0, order: stdscr-0 */
-        main_pans[1] = new_panel(main_wins[1]);   /* Push 1, order: stdscr-0-1 */
+        main_pans[0] = new_panel(ctg_win);   /* Push 0, order: stdscr-0 */
+        main_pans[1] = new_panel(posts_win);   /* Push 1, order: stdscr-0-1 */
         //main_pans[2] = new_panel(main_wins[2]);   /* Push 2, order: stdscr-0-1-2 */
         //main_pans[3] = new_panel(main_wins[3]);
 
@@ -54,33 +56,44 @@ void CursesProvider::init(){
         doupdate();
 
         top = main_pans[0];
+        MENU* cur_menu = posts_menu;
+
         while((ch = getch()) != KEY_F(1)){
                 switch(ch){
                         case 9:
+                                if(cur_menu == ctg_menu)
+                                        cur_menu = posts_menu;
+                                else
+                                        cur_menu = ctg_menu;
                                 top = (PANEL *)panel_userptr(top);
                                 top_panel(top);
                                 break;
                         case KEY_DOWN:
-                                menu_driver(ctg_menu, REQ_DOWN_ITEM);
+                                menu_driver(cur_menu, REQ_DOWN_ITEM);
                                 break;
                         case KEY_UP:
-                                menu_driver(ctg_menu, REQ_UP_ITEM);
+                                menu_driver(cur_menu, REQ_UP_ITEM);
                                 break;
                         case 'j':
-                                menu_driver(ctg_menu, REQ_DOWN_ITEM);
+                                menu_driver(cur_menu, REQ_DOWN_ITEM);
                                 break;
                         case 'k':
-                                menu_driver(ctg_menu, REQ_UP_ITEM);
+                                menu_driver(cur_menu, REQ_UP_ITEM);
                                 break;
                         case 'o':
                                 ctg_menu_callback(strdup("Test"));
                                 break;
                         case 10: /* Enter */
-                                ITEM *cur;
+                                if(cur_menu == ctg_menu){
+                                        wclear(posts_win);
+                                        ctg_menu_callback(strdup(item_name(current_item(ctg_menu))));
 
-                                cur = current_item(ctg_menu);
-                                ctg_menu_callback(strdup(item_name(cur)));
-                                pos_menu_cursor(ctg_menu);
+                                        top = (PANEL *)panel_userptr(top);
+                                        top_panel(top);
+                                        cur_menu = posts_menu;
+
+                                        win_show(posts_win, strdup("Posts"), 1);
+                                } 
                                 break;
                 }
                 update_panels();
@@ -105,23 +118,26 @@ void CursesProvider::create_categories_menu(){
 
         ctg_menu = new_menu((ITEM **)ctg_items);
 
-        main_wins[0] = newwin(LINES-2, 40, 0, 0);
-        keypad(main_wins[0], TRUE);
+        ctg_win = newwin(LINES-2, 40, 0, 0);
+        keypad(ctg_win, TRUE);
 
-        set_menu_win(ctg_menu, main_wins[0]);
-        set_menu_sub(ctg_menu, derwin(main_wins[0], 6, 38, 3, 1));
+        set_menu_win(ctg_menu, ctg_win);
+        set_menu_sub(ctg_menu, derwin(ctg_win, 0, 38, 3, 1));
 
         set_menu_mark(ctg_menu, "  ");
 
         /* Print a border around the main window and print a title */
-        win_show(main_wins[0], strdup("Categories"),  1);
-        refresh();
+        win_show(ctg_win, strdup("Categories"),  1);
         menu_opts_off(ctg_menu, O_SHOWDESC);
+        menu_opts_on(posts_menu, O_NONCYCLIC);
 
         post_menu(ctg_menu);
 }
 void CursesProvider::create_posts_menu(){
+        int height, width;
+
         int n_choices, c, i = 0;
+
         const map<string, PostData>* posts = feedly.giveAllUnread();
 
         /* Create items */
@@ -135,20 +151,54 @@ void CursesProvider::create_posts_menu(){
 
         posts_menu = new_menu((ITEM **)posts_items);
 
-        main_wins[1] = newwin(LINES-2, 0, 0, 40);
-        keypad(main_wins[1], TRUE);
+        posts_win = newwin(LINES-2, 0, 0, 40);
+        keypad(posts_win, TRUE);
 
-        set_menu_win(posts_menu, main_wins[1]);
-        set_menu_sub(posts_menu, derwin(main_wins[1], 6, 38, 3, 1));
+        getmaxyx(posts_win, height, width);
+
+        set_menu_win(posts_menu, posts_win);
+        set_menu_sub(posts_menu, derwin(posts_win, 0, width-2, 3, 1));
+        set_menu_format(posts_menu, height, 0);
 
         set_menu_mark(posts_menu, "  ");
 
         /* Print a border around the main window and print a title */
-        win_show(main_wins[1], strdup("Posts"),  1);
-        refresh();
-        menu_opts_off(ctg_menu, O_SHOWDESC);
+        win_show(posts_win, strdup("Posts"),  1);
+
+        menu_opts_off(posts_menu, O_SHOWDESC);
 
         post_menu(posts_menu);
+}
+void CursesProvider::ctg_menu_callback(char* label){
+        int height, width;
+
+        getmaxyx(posts_win, height, width);
+
+        int n_choices, c, i = 0;
+        const map<string, PostData>* posts;
+
+        if(!(string(label).compare("All")))
+                posts = feedly.giveAllUnread();
+        else
+                posts = feedly.giveCategoryPosts(strdup(label));
+
+        /* Create items */
+        n_choices = posts->size() + 1;
+        ITEM** items = (ITEM **)calloc(sizeof(std::map<string, PostData>::value_type)*n_choices, sizeof(ITEM *));
+
+        for(std::map<string, PostData>::const_iterator it = posts->begin(); it != posts->end(); ++it){
+                items[i] = new_item((it->second.title).c_str(), (it->first).c_str()); 
+                i++;
+        }
+        items[i] = NULL;
+
+
+        unpost_menu(posts_menu);
+
+        set_menu_items(posts_menu, items);
+
+        post_menu(posts_menu);
+        set_menu_format(posts_menu, height, 0);
 }
 void CursesProvider::win_show(WINDOW *win, char *label, int label_color){
         int startx, starty, height, width;
@@ -157,9 +207,9 @@ void CursesProvider::win_show(WINDOW *win, char *label, int label_color){
         getmaxyx(win, height, width);
 
         box(win, 0, 0);
-        mvwaddch(win, 2, 0, ACS_LTEE); 
-        mvwhline(win, 2, 1, ACS_HLINE, width - 2); 
-        mvwaddch(win, 2, width - 1, ACS_RTEE); 
+        mvwaddch(win, 2, 0, ACS_LTEE);
+        mvwhline(win, 2, 1, ACS_HLINE, width - 2);
+        mvwaddch(win, 2, width - 1, ACS_RTEE);
 
         print_in_middle(win, 1, 0, width, label, COLOR_PAIR(label_color));
 }
@@ -183,29 +233,6 @@ void CursesProvider::print_in_middle(WINDOW *win, int starty, int startx, int wi
         wattron(win, color);
         mvwprintw(win, y, x, "%s", string);
         wattroff(win, color);
-        refresh();
-}
-void CursesProvider::ctg_menu_callback(char* label){
-        int n_choices, c, i = 0;
-        const map<string, PostData>* posts;
-        if(!(string(label).compare("All")))
-                posts = feedly.giveAllUnread();
-        else
-                posts = feedly.giveCategoryPosts(strdup(label));
-
-        /* Create items */
-        n_choices = posts->size();
-        ITEM** items = (ITEM **)calloc(sizeof(std::map<string, PostData>::value_type)*n_choices, sizeof(ITEM *));
-
-        for(std::map<string, PostData>::const_iterator it = posts->begin(); it != posts->end(); ++it){
-                items[i] = new_item((it->second.title).c_str(), (it->first).c_str()); 
-                i++;
-        }
-
-        unpost_menu(posts_menu);
-        set_menu_items(posts_menu, items);
-        post_menu(posts_menu);
-        refresh();
 }
 void CursesProvider::cleanup(){
         unpost_menu(ctg_menu);
