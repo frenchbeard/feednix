@@ -40,8 +40,9 @@ class FeedlyProvider{
                 void parseAuthenticationResponse();
                 void getCookies();
                 void curl_cleanup();
-                const map<string, PostData>* giveCategoryPosts(const string& category);
+                const map<string, PostData>* giveStreamPosts(const string& category);
                 const map<string, string>* getLabels();
+                PostData* getSinglePostData(const string& id);
         private:
                 CURL *curl;
                 CURLcode curl_res;
@@ -50,7 +51,6 @@ class FeedlyProvider{
                 UserData user_data;
                 bool verboseFlag;
                 map<string, PostData> feeds;
-                map<string, PostData> catPosts;
                 void enableVerbose();
                 void curl_retrive(const string&);
                 void extract_galx_value();

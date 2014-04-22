@@ -107,32 +107,6 @@ void FeedlyProvider::parseAuthenticationResponse(){
         system("rm tokenFile.json");
 } 
 
-const map<string, PostData>* FeedlyProvider::giveAllUnread(){
-        curl_retrive("streams/contents?unreadOnly=true&streamId=" + string(curl_easy_escape(curl, ("user/"+ user_data.id + "/category/global.all").c_str(), 0)));
-        Json::Reader reader;
-        Json::Value root;
-
-        bool parsingSuccesful;
-
-        ifstream data("temp.txt", ifstream::binary);
-        parsingSuccesful = reader.parse(data, root);
-
-        if(data != NULL && curl_res == CURLE_OK && parsingSuccesful && root["items"].size() > 0){
-                string id;
-
-                for(int i = 0; i < root["items"].size(); i++){
-                        id = (root["items"][i]["id"]).asString();
-
-                        feeds[id].content = root["items"][i]["summary"]["content"].asString();
-                        feeds[id].title = root["items"][i]["title"].asString();
-                }
-        }
-        else{
-                cerr << "ERROR: Failed to Retrive Feeds" << endl;
-        }
-        data.close();
-        return &(feeds);
-}
 
 const map<string, string>* FeedlyProvider::getLabels(){
         curl_retrive("categories");
@@ -155,10 +129,13 @@ const map<string, string>* FeedlyProvider::getLabels(){
 
         return &(user_data.categories);
 }
+const map<string, PostData>* FeedlyProvider::giveStreamPosts(const string& category){
+        feeds.clear(); 
 
-const map<string, PostData>* FeedlyProvider::giveCategoryPosts(const string& category){
-        catPosts.clear(); 
-        curl_retrive("streams/" + string(curl_easy_escape(curl, user_data.categories[category].c_str(), 0)) + "/contents?unreadOnly=true&count=35");
+        if(!category.compare("All"))
+                curl_retrive("streams/contents?unreadOnly=true&streamId=" + string(curl_easy_escape(curl, ("user/"+ user_data.id + "/category/global.all").c_str(), 0)));
+        else
+                curl_retrive("streams/" + string(curl_easy_escape(curl, user_data.categories[category].c_str(), 0)) + "/contents?unreadOnly=true&count=35");
 
         Json::Reader reader;
         Json::Value root;
@@ -172,15 +149,17 @@ const map<string, PostData>* FeedlyProvider::giveCategoryPosts(const string& cat
                 cerr << "ERROR: Failed to Retrive Categories" << endl;
                 return NULL;
         }
-        
+
         for(int i = 0; i < root["items"].size(); i++){
-                catPosts[root["items"][i]["id"].asString()] = PostData{root["items"][i]["summary"]["content"].asString(), root["items"][i]["title"].asString()};
+                feeds[root["items"][i]["id"].asString()] = PostData{root["items"][i]["summary"]["content"].asString(), root["items"][i]["title"].asString()};
         }
 
-        return &(catPosts);
-                
-}
+        return &(feeds);
 
+}
+PostData* FeedlyProvider::getSinglePostData(const string& id){
+        return &(feeds[id]);
+}
 void FeedlyProvider::extract_galx_value(){
         string l;
         ifstream temp("cookie");
