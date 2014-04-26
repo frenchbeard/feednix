@@ -35,20 +35,14 @@ void CursesProvider::init(){
 
         create_categories_menu();
         create_posts_menu();
-        single_win = newwin(LINES-2, 0, 0, 40);
-        win_show(single_win, strdup("[Title]"),  1);
 
         /* Attach a panel to each window */     /* Order is bottom up */
         main_pans[0] = new_panel(ctg_win);   /* Push 0, order: stdscr-0 */
         main_pans[1] = new_panel(posts_win);   /* Push 1, order: stdscr-0-1 */
-        main_pans[2] = new_panel(single_win);   /* Push 2, order: stdscr-0-1-2 */
 
         /* Set up the user pointers to the next panel */
         set_panel_userptr(main_pans[0], main_pans[1]);
         set_panel_userptr(main_pans[1], main_pans[0]);
-        set_panel_userptr(main_pans[2], main_pans[1]);
-
-        hide_panel(main_pans[2]);
 
         update_panels();
 
@@ -83,11 +77,6 @@ void CursesProvider::init(){
                         case 'k':
                                 menu_driver(cur_menu, REQ_UP_ITEM);
                                 break;
-                        case 'c':
-                                hide_panel(main_pans[2]);
-                                top_panel(main_pans[1]);
-                                show_panel(main_pans[1]);
-                                break;
                         case 10: /* Enter */
                                 if(cur_menu == ctg_menu){
                                         wclear(posts_win);
@@ -100,11 +89,8 @@ void CursesProvider::init(){
                                         win_show(posts_win, strdup("Posts"), 1);
                                 }
                                 else if(panel_window(top) == posts_win){
-                                        wclear(single_win);
-                                        postsMenuCallback(item_description(current_item(cur_menu)));
-                                        hide_panel(main_pans[1]);
-                                        show_panel(main_pans[2]);
-                                        top_panel(main_pans[2]);
+                                        ITEM* curItem = current_item(cur_menu);
+                                        postsMenuCallback(curItem, item_description(curItem));
                                 }
                                 break;
                 }
@@ -161,7 +147,6 @@ void CursesProvider::create_posts_menu(){
                 posts_items[i] = new_item((it->second.title).c_str(), (it->first).c_str()); 
                 i++;
         }
-
         posts_menu = new_menu((ITEM **)posts_items);
 
         posts_win = newwin(LINES-2, 0, 0, 40);
@@ -170,8 +155,12 @@ void CursesProvider::create_posts_menu(){
         getmaxyx(posts_win, height, width);
 
         set_menu_win(posts_menu, posts_win);
-        set_menu_sub(posts_menu, derwin(posts_win, 0, width-2, 3, 1));
-        set_menu_format(posts_menu, height, 0);
+        set_menu_sub(posts_menu, derwin(posts_win, height-4, width-2, 3, 1));
+        set_menu_format(posts_menu, height-4, 0);
+
+        set_menu_fore(posts_menu, COLOR_PAIR(1) | A_REVERSE);
+        set_menu_back(posts_menu, COLOR_PAIR(2));
+        set_menu_grey(posts_menu, COLOR_PAIR(3));
 
         set_menu_mark(posts_menu, "  ");
 
@@ -210,15 +199,25 @@ void CursesProvider::ctg_menu_callback(char* label){
         post_menu(posts_menu);
         set_menu_format(posts_menu, height, 0);
 }
-void CursesProvider::postsMenuCallback(const char* desc){
+void CursesProvider::postsMenuCallback(ITEM* item, const char* desc){
+        item_opts_off(item, O_SELECTABLE);
+
         PostData* container = feedly.getSinglePostData(desc);
 
-        char *cstr = new char[(container->title).size() + 1];
-        strcpy(cstr, (container->title).c_str());
+        ofstream myfile ("example.html");
 
-        win_show(single_win, cstr, 1); 
+        if (myfile.is_open())
+                myfile << container->content;
 
-        delete [] cstr;
+        myfile.close();
+
+        def_prog_mode();
+        endwin();
+
+        system("w3m example.html");
+
+        reset_prog_mode();
+
         update_panels();
 }
 void CursesProvider::win_show(WINDOW *win, char *label, int label_color){

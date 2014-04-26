@@ -7,6 +7,7 @@
 
 using namespace std;
 
+#define DEFAULT_FCOUNT 500
 #define FEEDLY_URI "https://sandbox.feedly.com/v3/"
 #define CLIENT_ID "&client_id=sandbox"
 #define CLIENT_SECRET "&client_secret=V0H9C3O75ODIXFSSX9OH"

@@ -133,9 +133,9 @@ const map<string, PostData>* FeedlyProvider::giveStreamPosts(const string& categ
         feeds.clear(); 
 
         if(!category.compare("All"))
-                curl_retrive("streams/contents?unreadOnly=true&streamId=" + string(curl_easy_escape(curl, ("user/"+ user_data.id + "/category/global.all").c_str(), 0)));
+                curl_retrive("streams/contents?count=" + to_string(DEFAULT_FCOUNT) + "&unreadOnly=true&streamId=" + string(curl_easy_escape(curl, ("user/"+ user_data.id + "/category/global.all").c_str(), 0)));
         else
-                curl_retrive("streams/" + string(curl_easy_escape(curl, user_data.categories[category].c_str(), 0)) + "/contents?unreadOnly=true&count=35");
+                curl_retrive("streams/" + string(curl_easy_escape(curl, user_data.categories[category].c_str(), 0)) + "/contents?unreadOnly=true&count=" + to_string(DEFAULT_FCOUNT));
 
         Json::Reader reader;
         Json::Value root;
@@ -149,6 +149,9 @@ const map<string, PostData>* FeedlyProvider::giveStreamPosts(const string& categ
                 cerr << "ERROR: Failed to Retrive Categories" << endl;
                 return NULL;
         }
+
+        if(root["items"].size() == 0)
+                return NULL;
 
         for(int i = 0; i < root["items"].size(); i++){
                 feeds[root["items"][i]["id"].asString()] = PostData{root["items"][i]["summary"]["content"].asString(), root["items"][i]["title"].asString()};
