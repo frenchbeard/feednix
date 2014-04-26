@@ -17,13 +17,13 @@ class CursesProvider{
         private:
                 FeedlyProvider feedly;
                 const map<string, string> *labels;
-                WINDOW *ctg_win, *posts_win, *single_win, *wrapper;
-                PANEL  *main_pans[4], *top;
-                ITEM **ctg_items, **posts_items;
-                MENU *ctg_menu, *posts_menu;
-                void create_categories_menu(); 
-                void create_posts_menu(); 
-                void ctg_menu_callback(char* label);
+                WINDOW *ctgWin, *postsWin;
+                PANEL  *panels[2], *top;
+                ITEM **ctgItems, **postsItems;
+                MENU *ctgMenu, *postsMenu;
+                void createCategoriesMenu(); 
+                void createPostsMenu(); 
+                void ctgMenuCallback(char* label);
                 void postsMenuCallback(ITEM* item, const char* desc);
                 void win_show(WINDOW *win, char *label, int label_color);
                 void print_in_middle(WINDOW *win, int starty, int startx, int width, char *string, chtype color);

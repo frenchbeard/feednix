@@ -27,22 +27,19 @@ CursesProvider::CursesProvider(){
 void CursesProvider::init(){
         int ch;
 
-        /* Initialize all the colors */
         init_pair(1, COLOR_RED, 0);
         init_pair(2, COLOR_GREEN, COLOR_BLACK);
         init_pair(3, COLOR_BLUE, COLOR_BLACK);
         init_pair(4, COLOR_CYAN, COLOR_BLACK);
 
-        create_categories_menu();
-        create_posts_menu();
+        createCategoriesMenu();
+        createPostsMenu();
 
-        /* Attach a panel to each window */     /* Order is bottom up */
-        main_pans[0] = new_panel(ctg_win);   /* Push 0, order: stdscr-0 */
-        main_pans[1] = new_panel(posts_win);   /* Push 1, order: stdscr-0-1 */
+        panels[0] = new_panel(ctgWin);
+        panels[1] = new_panel(postsWin);
 
-        /* Set up the user pointers to the next panel */
-        set_panel_userptr(main_pans[0], main_pans[1]);
-        set_panel_userptr(main_pans[1], main_pans[0]);
+        set_panel_userptr(panels[0], panels[1]);
+        set_panel_userptr(panels[1], panels[0]);
 
         update_panels();
 
@@ -51,45 +48,43 @@ void CursesProvider::init(){
         attroff(COLOR_PAIR(4));
         doupdate();
 
-        top = main_pans[1];
+        top = panels[1];
         top_panel(top);
-        MENU* cur_menu = posts_menu;
+
+        MENU* curMenu = postsMenu;
 
         while((ch = getch()) != KEY_F(1)){
                 switch(ch){
                         case 9:
-                                if(cur_menu == ctg_menu)
-                                        cur_menu = posts_menu;
+                                if(curMenu == ctgMenu)
+                                        curMenu = postsMenu;
                                 else
-                                        cur_menu = ctg_menu;
+                                        curMenu = ctgMenu;
+
                                 top = (PANEL *)panel_userptr(top);
                                 top_panel(top);
                                 break;
                         case KEY_DOWN:
-                                menu_driver(cur_menu, REQ_DOWN_ITEM);
+                                menu_driver(curMenu, REQ_DOWN_ITEM);
                                 break;
                         case KEY_UP:
-                                menu_driver(cur_menu, REQ_UP_ITEM);
+                                menu_driver(curMenu, REQ_UP_ITEM);
                                 break;
                         case 'j':
-                                menu_driver(cur_menu, REQ_DOWN_ITEM);
+                                menu_driver(curMenu, REQ_DOWN_ITEM);
                                 break;
                         case 'k':
-                                menu_driver(cur_menu, REQ_UP_ITEM);
+                                menu_driver(curMenu, REQ_UP_ITEM);
                                 break;
-                        case 10: /* Enter */
-                                if(cur_menu == ctg_menu){
-                                        wclear(posts_win);
-                                        ctg_menu_callback(strdup(item_name(current_item(cur_menu))));
+                        case 10:
+                                if(curMenu == ctgMenu){
+                                        wclear(postsWin);
+                                        ctgMenuCallback(strdup(item_name(current_item(curMenu))));
 
-                                        top = (PANEL *)panel_userptr(top);
-                                        top_panel(top);
-                                        cur_menu = posts_menu;
-
-                                        win_show(posts_win, strdup("Posts"), 1);
+                                        win_show(postsWin, strdup("Posts"), 1);
                                 }
-                                else if(panel_window(top) == posts_win){
-                                        ITEM* curItem = current_item(cur_menu);
+                                else if(panel_window(top) == postsWin){
+                                        ITEM* curItem = current_item(curMenu);
                                         postsMenuCallback(curItem, item_description(curItem));
                                 }
                                 break;
@@ -99,89 +94,85 @@ void CursesProvider::init(){
         }
         cleanup();
 }
-void CursesProvider::create_categories_menu(){
+void CursesProvider::createCategoriesMenu(){
         int n_choices, c, i = 2;
 
-        /* Create items */
         n_choices = labels->size() + 2;
-        ctg_items = (ITEM **)calloc(sizeof(std::map<string, string>::value_type)*n_choices, sizeof(ITEM *));
+        ctgItems = (ITEM **)calloc(sizeof(std::map<string, string>::value_type)*n_choices, sizeof(ITEM *));
 
-        ctg_items[0] = new_item("All", "");
-        ctg_items[1] = new_item("Saved", "");
+        ctgItems[0] = new_item("All", "");
+        ctgItems[1] = new_item("Saved", "");
 
         for(std::map<string, string>::const_iterator it = labels->begin(); it != labels->end(); ++it){
-                ctg_items[i] = new_item((it->first).c_str(), (it->second).c_str());
+                ctgItems[i] = new_item((it->first).c_str(), (it->second).c_str());
                 i++;
         }
 
-        ctg_menu = new_menu((ITEM **)ctg_items);
+        ctgMenu = new_menu((ITEM **)ctgItems);
 
-        ctg_win = newwin(LINES-2, 40, 0, 0);
-        keypad(ctg_win, TRUE);
+        ctgWin = newwin(LINES-2, 40, 0, 0);
+        keypad(ctgWin, TRUE);
 
-        set_menu_win(ctg_menu, ctg_win);
-        set_menu_sub(ctg_menu, derwin(ctg_win, 0, 38, 3, 1));
+        set_menu_win(ctgMenu, ctgWin);
+        set_menu_sub(ctgMenu, derwin(ctgWin, 0, 38, 3, 1));
 
-        set_menu_mark(ctg_menu, "  ");
+        set_menu_mark(ctgMenu, "  ");
 
-        /* Print a border around the main window and print a title */
-        win_show(ctg_win, strdup("Categories"),  1);
+        win_show(ctgWin, strdup("Categories"),  1);
 
-        menu_opts_off(ctg_menu, O_SHOWDESC);
-        menu_opts_on(posts_menu, O_NONCYCLIC);
+        menu_opts_off(ctgMenu, O_SHOWDESC);
+        menu_opts_on(postsMenu, O_NONCYCLIC);
 
-        post_menu(ctg_menu);
+        post_menu(ctgMenu);
 }
-void CursesProvider::create_posts_menu(){
+void CursesProvider::createPostsMenu(){
         int height, width;
 
         int n_choices, c, i = 0;
 
         const map<string, PostData>* posts = feedly.giveStreamPosts("All");
 
-        /* Create items */
         n_choices = posts->size();
-        posts_items = (ITEM **)calloc(sizeof(std::map<string, PostData>::value_type)*n_choices, sizeof(ITEM *));
+        postsItems = (ITEM **)calloc(sizeof(std::map<string, PostData>::value_type)*n_choices, sizeof(ITEM *));
 
         for(std::map<string, PostData>::const_iterator it = posts->begin(); it != posts->end(); ++it){
-                posts_items[i] = new_item((it->second.title).c_str(), (it->first).c_str()); 
+                postsItems[i] = new_item((it->second.title).c_str(), (it->first).c_str()); 
                 i++;
         }
-        posts_menu = new_menu((ITEM **)posts_items);
 
-        posts_win = newwin(LINES-2, 0, 0, 40);
-        keypad(posts_win, TRUE);
+        postsMenu = new_menu((ITEM **)postsItems);
 
-        getmaxyx(posts_win, height, width);
+        postsWin = newwin(LINES-2, 0, 0, 40);
+        keypad(postsWin, TRUE);
 
-        set_menu_win(posts_menu, posts_win);
-        set_menu_sub(posts_menu, derwin(posts_win, height-4, width-2, 3, 1));
-        set_menu_format(posts_menu, height-4, 0);
+        getmaxyx(postsWin, height, width);
 
-        set_menu_fore(posts_menu, COLOR_PAIR(1) | A_REVERSE);
-        set_menu_back(posts_menu, COLOR_PAIR(2));
-        set_menu_grey(posts_menu, COLOR_PAIR(3));
+        set_menu_win(postsMenu, postsWin);
+        set_menu_sub(postsMenu, derwin(postsWin, height-4, width-2, 3, 1));
+        set_menu_format(postsMenu, height-4, 0);
 
-        set_menu_mark(posts_menu, "  ");
+        set_menu_fore(postsMenu, COLOR_PAIR(1) | A_REVERSE);
+        set_menu_back(postsMenu, COLOR_PAIR(2));
+        set_menu_grey(postsMenu, COLOR_PAIR(3));
 
-        /* Print a border around the main window and print a title */
-        win_show(posts_win, strdup("Posts"),  1);
+        set_menu_mark(postsMenu, "  ");
 
-        menu_opts_off(posts_menu, O_SHOWDESC);
+        win_show(postsWin, strdup("Posts"),  1);
 
-        post_menu(posts_menu);
+        menu_opts_off(postsMenu, O_SHOWDESC);
+
+        post_menu(postsMenu);
 }
-void CursesProvider::ctg_menu_callback(char* label){
+void CursesProvider::ctgMenuCallback(char* label){
         int height, width;
 
-        getmaxyx(posts_win, height, width);
+        getmaxyx(postsWin, height, width);
 
         int n_choices, c, i = 0;
         const map<string, PostData>* posts;
 
         posts = feedly.giveStreamPosts(label);
 
-        /* Create items */
         n_choices = posts->size() + 1;
         ITEM** items = (ITEM **)calloc(sizeof(std::map<string, PostData>::value_type)*n_choices, sizeof(ITEM *));
 
@@ -189,15 +180,15 @@ void CursesProvider::ctg_menu_callback(char* label){
                 items[i] = new_item((it->second.title).c_str(), (it->first).c_str()); 
                 i++;
         }
+
         items[i] = NULL;
 
+        unpost_menu(postsMenu);
 
-        unpost_menu(posts_menu);
+        set_menu_items(postsMenu, items);
 
-        set_menu_items(posts_menu, items);
-
-        post_menu(posts_menu);
-        set_menu_format(posts_menu, height, 0);
+        post_menu(postsMenu);
+        set_menu_format(postsMenu, height, 0);
 }
 void CursesProvider::postsMenuCallback(ITEM* item, const char* desc){
         item_opts_off(item, O_SELECTABLE);
@@ -255,15 +246,15 @@ void CursesProvider::print_in_middle(WINDOW *win, int starty, int startx, int wi
         wattroff(win, color);
 }
 void CursesProvider::cleanup(){
-        unpost_menu(ctg_menu);
-        free_menu(ctg_menu);
-        for(int i = 0; i < ARRAY_SIZE(ctg_items); ++i)
-                free_item(ctg_items[i]);
+        unpost_menu(ctgMenu);
+        free_menu(ctgMenu);
+        for(int i = 0; i < ARRAY_SIZE(ctgItems); ++i)
+                free_item(ctgItems[i]);
 
-        unpost_menu(posts_menu);
-        free_menu(posts_menu);
-        for(int i = 0; i < ARRAY_SIZE(posts_items); ++i)
-                free_item(posts_items[i]);
+        unpost_menu(postsMenu);
+        free_menu(postsMenu);
+        for(int i = 0; i < ARRAY_SIZE(postsItems); ++i)
+                free_item(postsItems[i]);
 
         endwin();
         feedly.curl_cleanup();
