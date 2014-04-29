@@ -12,7 +12,6 @@ FeedlyProvider::FeedlyProvider(){
         curl_global_init(CURL_GLOBAL_DEFAULT);
         verboseFlag = false;
 }
-
 void FeedlyProvider::authenticateUser(const string& email, const string& passwd){
         getCookies();
 
@@ -60,7 +59,6 @@ void FeedlyProvider::authenticateUser(const string& email, const string& passwd)
         curl_easy_cleanup(curl);
         fclose(data_holder);
 }
-
 void FeedlyProvider::parseAuthenticationResponse(){
         struct curl_httppost *formpost = NULL;
         FILE *tokenJSON = fopen("tokenFile.json", "wb");
@@ -106,8 +104,6 @@ void FeedlyProvider::parseAuthenticationResponse(){
         system("rm temp.txt");
         system("rm tokenFile.json");
 } 
-
-
 const map<string, string>* FeedlyProvider::getLabels(){
         curl_retrive("categories");
 
@@ -133,9 +129,9 @@ const map<string, PostData>* FeedlyProvider::giveStreamPosts(const string& categ
         feeds.clear(); 
 
         if(!category.compare("All"))
-                curl_retrive("streams/contents?count=" + to_string(DEFAULT_FCOUNT) + "&unreadOnly=true&streamId=" + string(curl_easy_escape(curl, ("user/"+ user_data.id + "/category/global.all").c_str(), 0)));
+                curl_retrive("streams/contents?ranked=newest&count=" + to_string(DEFAULT_FCOUNT) + "&unreadOnly=true&streamId=" + string(curl_easy_escape(curl, ("user/"+ user_data.id + "/category/global.all").c_str(), 0)));
         else
-                curl_retrive("streams/" + string(curl_easy_escape(curl, user_data.categories[category].c_str(), 0)) + "/contents?unreadOnly=true&count=" + to_string(DEFAULT_FCOUNT));
+                curl_retrive("streams/" + string(curl_easy_escape(curl, user_data.categories[category].c_str(), 0)) + "/contents?unreadOnly=true&ranked=newest&count=" + to_string(DEFAULT_FCOUNT));
 
         Json::Reader reader;
         Json::Value root;
@@ -160,28 +156,50 @@ const map<string, PostData>* FeedlyProvider::giveStreamPosts(const string& categ
         return &(feeds);
 
 }
-PostData* FeedlyProvider::getSinglePostData(const string& id){
-        return &(feeds[id]);
-}
-void FeedlyProvider::extract_galx_value(){
-        string l;
-        ifstream temp("cookie");
-        size_t index , last;
+bool FeedlyProvider::markPostsRead(const vector<string>* ids){
+        FILE* data_holder = fopen("temp.txt", "wb");
+        int i = 0;
+        Json::Reader reader;
+        Json::Value root;
+ 
+        string document = "{\"entryIds\":[],\"type\": \"entries\",\"action\": \"markAsRead\"}";
 
-        if(temp.is_open()){
-                while(getline(temp, l)){
-                        index = l.rfind("GALX");
+        if(reader.parse(document, root)){
+                for(std::vector<string>::const_iterator it = ids->begin(); it != ids->end(); ++it)
+                        root["entryIds"][i] = *it;
 
-                        if(index > 0 && index != string::npos){
-                                last = l.find("X") + 2;
-                                break;
-                        }
-                } 
+                Json::StyledWriter writer;
+                document = writer.write(root); 
+
+                curl = curl_easy_init();
+
+                struct curl_slist *chunk = NULL;
+                chunk = curl_slist_append(chunk, "Content-Type: application/json");
+
+                curl_easy_setopt(curl, CURLOPT_URL, (string(FEEDLY_URI) + "markers").c_str());
+                curl_easy_setopt(curl, CURLOPT_WRITEDATA, data_holder);
+                curl_easy_setopt(curl, CURLOPT_POST, 1);
+                curl_easy_setopt(curl, CURLOPT_POSTFIELDS, document.c_str());
+
+                curl_res = curl_easy_perform(curl);
+                if(curl_res == CURLE_OK){
+                        return true;
+                }
+                else{
+                        cerr << "Could not mark post(s) as read" << endl;
+                        return false;
+                }
+
+                curl_easy_cleanup(curl);
+
         }
 
-        user_data.galx = l.substr(last);
-        temp.close();
-        return;
+        fclose(data_holder);
+        return false;
+}
+
+PostData* FeedlyProvider::getSinglePostData(const string& id){
+        return &(feeds[id]);
 }
 
 void FeedlyProvider::getCookies(){
@@ -215,12 +233,30 @@ void FeedlyProvider::getCookies(){
         fclose(data_holder);
 
 }
-
 void FeedlyProvider::enableVerbose(){
         if(verboseFlag)
                 curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
 }
+void FeedlyProvider::extract_galx_value(){
+        string l;
+        ifstream temp("cookie");
+        size_t index , last;
 
+        if(temp.is_open()){
+                while(getline(temp, l)){
+                        index = l.rfind("GALX");
+
+                        if(index > 0 && index != string::npos){
+                                last = l.find("X") + 2;
+                                break;
+                        }
+                } 
+        }
+
+        user_data.galx = l.substr(last);
+        temp.close();
+        return;
+}
 void FeedlyProvider::curl_retrive(const string& uri){
         struct curl_slist *chunk = NULL;
 
@@ -240,7 +276,6 @@ void FeedlyProvider::curl_retrive(const string& uri){
 
         fclose(data_holder);
 }
-
 void FeedlyProvider::curl_cleanup(){
         curl_global_cleanup();
 }

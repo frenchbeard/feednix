@@ -10,6 +10,7 @@ int main(int argc, char **argv)
         CursesProvider curses;
 
         curses.init();
+        curses.control();
         return 0;
 }
 

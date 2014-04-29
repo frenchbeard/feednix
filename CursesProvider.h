@@ -14,6 +14,7 @@ class CursesProvider{
         public:
                 CursesProvider();
                 void init();
+                void control();
         private:
                 FeedlyProvider feedly;
                 const map<string, string> *labels;

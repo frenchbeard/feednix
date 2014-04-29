@@ -2,9 +2,11 @@
 #include <map>
 #include <panel.h>
 #include <menu.h> 
-#include <string.h>
 #include <stdio.h>
 #include <iostream>
+#include <vector>
+#include <string>
+#include <string.h>
 
 #include "CursesProvider.h"
 
@@ -25,8 +27,6 @@ CursesProvider::CursesProvider(){
         labels = feedly.getLabels();
 }
 void CursesProvider::init(){
-        int ch;
-
         init_pair(1, COLOR_RED, 0);
         init_pair(2, COLOR_GREEN, COLOR_BLACK);
         init_pair(3, COLOR_BLUE, COLOR_BLACK);
@@ -50,7 +50,9 @@ void CursesProvider::init(){
 
         top = panels[1];
         top_panel(top);
-
+}
+void CursesProvider::control(){
+        int ch;
         MENU* curMenu = postsMenu;
 
         while((ch = getch()) != KEY_F(1)){
@@ -168,10 +170,12 @@ void CursesProvider::ctgMenuCallback(char* label){
 
         getmaxyx(postsWin, height, width);
 
-        int n_choices, c, i = 0;
+        int n_choices, i = 0;
         const map<string, PostData>* posts;
 
         posts = feedly.giveStreamPosts(label);
+        if(posts == NULL)
+                return;
 
         n_choices = posts->size() + 1;
         ITEM** items = (ITEM **)calloc(sizeof(std::map<string, PostData>::value_type)*n_choices, sizeof(ITEM *));
@@ -206,6 +210,11 @@ void CursesProvider::postsMenuCallback(ITEM* item, const char* desc){
         endwin();
 
         system("w3m example.html");
+
+        vector<string> *temp = new vector<string>;
+        temp->push_back(desc);
+
+        feedly.markPostsRead(const_cast<vector<string>*>(temp));
 
         reset_prog_mode();
 

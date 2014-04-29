@@ -3,7 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <map>
-#include <jsoncpp/json/json.h>
+#include <vector>
 
 using namespace std;
 
@@ -37,13 +37,11 @@ class FeedlyProvider{
         public:
                 FeedlyProvider();
                 void authenticateUser(const string& email, const string& passwd);
-                const map<string, PostData>* giveAllUnread();
-                void parseAuthenticationResponse();
-                void getCookies();
-                void curl_cleanup();
+                bool markPostsRead(const vector<string>* ids);
                 const map<string, PostData>* giveStreamPosts(const string& category);
                 const map<string, string>* getLabels();
                 PostData* getSinglePostData(const string& id);
+                void curl_cleanup();
         private:
                 CURL *curl;
                 CURLcode curl_res;
@@ -52,6 +50,8 @@ class FeedlyProvider{
                 UserData user_data;
                 bool verboseFlag;
                 map<string, PostData> feeds;
+                void parseAuthenticationResponse();
+                void getCookies();
                 void enableVerbose();
                 void curl_retrive(const string&);
                 void extract_galx_value();
