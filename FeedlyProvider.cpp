@@ -11,6 +11,7 @@ using namespace std;
 FeedlyProvider::FeedlyProvider(){
         curl_global_init(CURL_GLOBAL_DEFAULT);
         verboseFlag = false;
+//        feeds = new vector<PostData>;
 }
 void FeedlyProvider::authenticateUser(const string& email, const string& passwd){
         getCookies();
@@ -125,10 +126,10 @@ const map<string, string>* FeedlyProvider::getLabels(){
 
         return &(user_data.categories);
 }
-const map<string, PostData>* FeedlyProvider::giveStreamPosts(const string& category){
+const vector<PostData>* FeedlyProvider::giveStreamPosts(const string& category){
         feeds.clear(); 
 
-        if(!category.compare("All"))
+        if(category.compare("All") == 0)
                 curl_retrive("streams/contents?ranked=newest&count=" + to_string(DEFAULT_FCOUNT) + "&unreadOnly=true&streamId=" + string(curl_easy_escape(curl, ("user/"+ user_data.id + "/category/global.all").c_str(), 0)));
         else
                 curl_retrive("streams/" + string(curl_easy_escape(curl, user_data.categories[category].c_str(), 0)) + "/contents?unreadOnly=true&ranked=newest&count=" + to_string(DEFAULT_FCOUNT));
@@ -150,7 +151,7 @@ const map<string, PostData>* FeedlyProvider::giveStreamPosts(const string& categ
                 return NULL;
 
         for(int i = 0; i < root["items"].size(); i++){
-                feeds[root["items"][i]["id"].asString()] = PostData{root["items"][i]["summary"]["content"].asString(), root["items"][i]["title"].asString()};
+                feeds.push_back(PostData{root["items"][i]["summary"]["content"].asString(), root["items"][i]["title"].asString(), root["items"][i]["id"].asString()});
         }
 
         return &(feeds);
@@ -159,47 +160,49 @@ const map<string, PostData>* FeedlyProvider::giveStreamPosts(const string& categ
 bool FeedlyProvider::markPostsRead(const vector<string>* ids){
         FILE* data_holder = fopen("temp.txt", "wb");
         int i = 0;
-        Json::Reader reader;
-        Json::Value root;
- 
-        string document = "{\"entryIds\":[],\"type\": \"entries\",\"action\": \"markAsRead\"}";
+        Json::Value fromScratch;
+        Json::Value array;
 
-        if(reader.parse(document, root)){
-                for(std::vector<string>::const_iterator it = ids->begin(); it != ids->end(); ++it)
-                        root["entryIds"][i] = *it;
+        fromScratch["type"] = "entries";
+        fromScratch["action"] = "markAsRead";
 
-                Json::StyledWriter writer;
-                document = writer.write(root); 
+        //string document = "{\"entryIds\":[],\"type\": \"entries\",\"action\": \"markAsRead\"}";
 
-                curl = curl_easy_init();
+        for(std::vector<string>::const_iterator it = ids->begin(); it != ids->end(); ++it)
+                array.append("entryIds") = *it;
+        fromScratch["entryIds"] = array;
 
-                struct curl_slist *chunk = NULL;
-                chunk = curl_slist_append(chunk, "Content-Type: application/json");
+        Json::StyledWriter writer;
+        string document = writer.write(fromScratch); 
 
-                curl_easy_setopt(curl, CURLOPT_URL, (string(FEEDLY_URI) + "markers").c_str());
-                curl_easy_setopt(curl, CURLOPT_WRITEDATA, data_holder);
-                curl_easy_setopt(curl, CURLOPT_POST, 1);
-                curl_easy_setopt(curl, CURLOPT_POSTFIELDS, document.c_str());
+        curl = curl_easy_init();
 
-                curl_res = curl_easy_perform(curl);
-                if(curl_res == CURLE_OK){
-                        return true;
-                }
-                else{
-                        cerr << "Could not mark post(s) as read" << endl;
-                        return false;
-                }
+        struct curl_slist *chunk = NULL;
+        chunk = curl_slist_append(chunk, "Content-Type: application/json");
+        chunk = curl_slist_append(chunk, ("Authorization: OAuth " + user_data.authToken).c_str());
 
-                curl_easy_cleanup(curl);
+        curl_easy_setopt(curl, CURLOPT_URL, (string(FEEDLY_URI) + "markers").c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, data_holder);
+        curl_easy_setopt(curl, CURLOPT_POST, 1);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, curl_easy_escape(curl, document.c_str(), 0));
 
+        curl_res = curl_easy_perform(curl);
+        if(curl_res == CURLE_OK){
+                return true;
         }
+        else{
+                cerr << "Could not mark post(s) as read" << endl;
+                return false;
+        }
+
+        curl_easy_cleanup(curl);
 
         fclose(data_holder);
         return false;
 }
 
-PostData* FeedlyProvider::getSinglePostData(const string& id){
-        return &(feeds[id]);
+PostData* FeedlyProvider::getSinglePostData(const int index){
+        return &(feeds[index]);
 }
 
 void FeedlyProvider::getCookies(){

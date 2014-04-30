@@ -7,6 +7,8 @@
 #include <vector>
 #include <string>
 #include <string.h>
+#include <termios.h>
+#include <unistd.h>
 
 #include "CursesProvider.h"
 
@@ -15,7 +17,19 @@
 
 
 CursesProvider::CursesProvider(){
-        feedly.authenticateUser("jorgemartinezhernandez", "trueforerunner117");
+        string email, pswd;
+        cout << "Enter email: ";
+        cin >> email;
+
+        termios oldt;
+        tcgetattr(STDIN_FILENO, &oldt);
+        termios newt = oldt;
+        newt.c_lflag &= ~ECHO;
+        tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+        cout << "Enter password: ";
+        cin >> pswd;
+        feedly.authenticateUser(email, pswd);
 
         initscr();
         start_color();
@@ -84,6 +98,10 @@ void CursesProvider::control(){
                                         ctgMenuCallback(strdup(item_name(current_item(curMenu))));
 
                                         win_show(postsWin, strdup("Posts"), 1);
+                                        curMenu = postsMenu;
+
+                                        top = (PANEL *)panel_userptr(top);
+                                        top_panel(top);
                                 }
                                 else if(panel_window(top) == postsWin){
                                         ITEM* curItem = current_item(curMenu);
@@ -132,13 +150,13 @@ void CursesProvider::createPostsMenu(){
 
         int n_choices, c, i = 0;
 
-        const map<string, PostData>* posts = feedly.giveStreamPosts("All");
+        const vector<PostData> *posts = feedly.giveStreamPosts("All");
 
         n_choices = posts->size();
-        postsItems = (ITEM **)calloc(sizeof(std::map<string, PostData>::value_type)*n_choices, sizeof(ITEM *));
+        postsItems = (ITEM **)calloc(sizeof(std::vector<PostData>::value_type)*n_choices, sizeof(ITEM *));
 
-        for(std::map<string, PostData>::const_iterator it = posts->begin(); it != posts->end(); ++it){
-                postsItems[i] = new_item((it->second.title).c_str(), (it->first).c_str()); 
+        for(auto it = posts->begin(); it != posts->end(); ++it){
+                postsItems[i] = new_item((it->title).c_str(), to_string(i).c_str()); 
                 i++;
         }
 
@@ -157,7 +175,7 @@ void CursesProvider::createPostsMenu(){
         set_menu_back(postsMenu, COLOR_PAIR(2));
         set_menu_grey(postsMenu, COLOR_PAIR(3));
 
-        set_menu_mark(postsMenu, "  ");
+        set_menu_mark(postsMenu, "*");
 
         win_show(postsWin, strdup("Posts"),  1);
 
@@ -171,17 +189,16 @@ void CursesProvider::ctgMenuCallback(char* label){
         getmaxyx(postsWin, height, width);
 
         int n_choices, i = 0;
-        const map<string, PostData>* posts;
+        const vector<PostData>* posts = feedly.giveStreamPosts(label);
 
-        posts = feedly.giveStreamPosts(label);
         if(posts == NULL)
                 return;
 
         n_choices = posts->size() + 1;
-        ITEM** items = (ITEM **)calloc(sizeof(std::map<string, PostData>::value_type)*n_choices, sizeof(ITEM *));
+        ITEM** items = (ITEM **)calloc(sizeof(std::vector<PostData>::value_type)*n_choices, sizeof(ITEM *));
 
-        for(std::map<string, PostData>::const_iterator it = posts->begin(); it != posts->end(); ++it){
-                items[i] = new_item((it->second.title).c_str(), (it->first).c_str()); 
+        for(auto it = posts->begin(); it != posts->end(); ++it){
+                items[i] = new_item((it->title).c_str(), to_string(i).c_str());
                 i++;
         }
 
@@ -197,7 +214,7 @@ void CursesProvider::ctgMenuCallback(char* label){
 void CursesProvider::postsMenuCallback(ITEM* item, const char* desc){
         item_opts_off(item, O_SELECTABLE);
 
-        PostData* container = feedly.getSinglePostData(desc);
+        PostData* container = feedly.getSinglePostData(item_index(item));
 
         ofstream myfile ("example.html");
 

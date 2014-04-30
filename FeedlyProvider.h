@@ -31,6 +31,7 @@ struct UserData{
 struct PostData{
         string content;
         string title;
+        string id;
 };
 
 class FeedlyProvider{
@@ -38,9 +39,9 @@ class FeedlyProvider{
                 FeedlyProvider();
                 void authenticateUser(const string& email, const string& passwd);
                 bool markPostsRead(const vector<string>* ids);
-                const map<string, PostData>* giveStreamPosts(const string& category);
+                const vector<PostData>* giveStreamPosts(const string& category);
                 const map<string, string>* getLabels();
-                PostData* getSinglePostData(const string& id);
+                PostData* getSinglePostData(const int index);
                 void curl_cleanup();
         private:
                 CURL *curl;
@@ -49,7 +50,7 @@ class FeedlyProvider{
                 string userAuthCode;
                 UserData user_data;
                 bool verboseFlag;
-                map<string, PostData> feeds;
+                vector<PostData> feeds;
                 void parseAuthenticationResponse();
                 void getCookies();
                 void enableVerbose();
