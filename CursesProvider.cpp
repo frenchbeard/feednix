@@ -58,7 +58,7 @@ void CursesProvider::init(){
         update_panels();
 
         attron(COLOR_PAIR(4));
-        mvprintw(LINES - 2, 0, "Use tab to browse through the windows (F1 to Exit)");
+        mvprintw(LINES - 2, 0, "a: mark all read  r: mark single read  R: refresh F1: exit");
         attroff(COLOR_PAIR(4));
         doupdate();
 
@@ -105,7 +105,7 @@ void CursesProvider::control(){
                                 }
                                 else if(panel_window(top) == postsWin){
                                         ITEM* curItem = current_item(curMenu);
-                                        postsMenuCallback(curItem, item_description(curItem));
+                                        postsMenuCallback(curItem);
                                 }
                                 break;
                 }
@@ -156,7 +156,7 @@ void CursesProvider::createPostsMenu(){
         postsItems = (ITEM **)calloc(sizeof(std::vector<PostData>::value_type)*n_choices, sizeof(ITEM *));
 
         for(auto it = posts->begin(); it != posts->end(); ++it){
-                postsItems[i] = new_item((it->title).c_str(), to_string(i).c_str()); 
+                postsItems[i] = new_item((it->title).c_str(), (it->id).c_str()); 
                 i++;
         }
 
@@ -198,7 +198,7 @@ void CursesProvider::ctgMenuCallback(char* label){
         ITEM** items = (ITEM **)calloc(sizeof(std::vector<PostData>::value_type)*n_choices, sizeof(ITEM *));
 
         for(auto it = posts->begin(); it != posts->end(); ++it){
-                items[i] = new_item((it->title).c_str(), to_string(i).c_str());
+                items[i] = new_item((it->title).c_str(), (it->id).c_str());
                 i++;
         }
 
@@ -211,7 +211,7 @@ void CursesProvider::ctgMenuCallback(char* label){
         post_menu(postsMenu);
         set_menu_format(postsMenu, height, 0);
 }
-void CursesProvider::postsMenuCallback(ITEM* item, const char* desc){
+void CursesProvider::postsMenuCallback(ITEM* item){
         item_opts_off(item, O_SELECTABLE);
 
         PostData* container = feedly.getSinglePostData(item_index(item));
@@ -229,7 +229,7 @@ void CursesProvider::postsMenuCallback(ITEM* item, const char* desc){
         system("w3m example.html");
 
         vector<string> *temp = new vector<string>;
-        temp->push_back(desc);
+        temp->push_back(container->id);
 
         feedly.markPostsRead(const_cast<vector<string>*>(temp));
 

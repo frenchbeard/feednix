@@ -10,7 +10,7 @@ using namespace std;
 #define DEFAULT_FCOUNT 500
 #define FEEDLY_URI "https://sandbox.feedly.com/v3/"
 #define CLIENT_ID "&client_id=sandbox"
-#define CLIENT_SECRET "&client_secret=V0H9C3O75ODIXFSSX9OH"
+#define CLIENT_SECRET "&client_secret=0AUDIAHZEB0ISJ1JLFWZ"
 #define REDIRECT_URI "&redirect_uri=http://localhost"
 #define SCOPE "&scope=https://cloud.feedly.com/subscriptions"
 #define RESPONSE_TYPE "code"

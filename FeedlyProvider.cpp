@@ -10,7 +10,7 @@ using namespace std;
 
 FeedlyProvider::FeedlyProvider(){
         curl_global_init(CURL_GLOBAL_DEFAULT);
-        verboseFlag = false;
+        verboseFlag = true;
 //        feeds = new vector<PostData>;
 }
 void FeedlyProvider::authenticateUser(const string& email, const string& passwd){
@@ -49,7 +49,6 @@ void FeedlyProvider::authenticateUser(const string& email, const string& passwd)
                         user_data.code = tempCode.substr(codeIndex, (tempCode.find("&", codeIndex) - codeIndex));
 
                         parseAuthenticationResponse();
-                        return;
                 }
         }
         else{
@@ -59,12 +58,12 @@ void FeedlyProvider::authenticateUser(const string& email, const string& passwd)
 
         curl_easy_cleanup(curl);
         fclose(data_holder);
+        system("rm tokenFile.json");
+        system("rm temp.txt");
 }
 void FeedlyProvider::parseAuthenticationResponse(){
         struct curl_httppost *formpost = NULL;
         FILE *tokenJSON = fopen("tokenFile.json", "wb");
-
-        curl = curl_easy_init();
 
         feedly_url = FEEDLY_URI + string("auth/token?code=") + user_data.code +  CLIENT_ID +  CLIENT_SECRET +  REDIRECT_URI + SCOPE + "&grant_type=authorization_code";
 
@@ -101,9 +100,6 @@ void FeedlyProvider::parseAuthenticationResponse(){
         if(curl_res != CURLE_OK)
                 fprintf(stderr, "curl_easy_perform() failed : %s\n", curl_easy_strerror(curl_res));
 
-        curl_easy_cleanup(curl);
-        system("rm temp.txt");
-        system("rm tokenFile.json");
 } 
 const map<string, string>* FeedlyProvider::getLabels(){
         curl_retrive("categories");
@@ -150,9 +146,8 @@ const vector<PostData>* FeedlyProvider::giveStreamPosts(const string& category){
         if(root["items"].size() == 0)
                 return NULL;
 
-        for(int i = 0; i < root["items"].size(); i++){
+        for(int i = 0; i < root["items"].size(); i++)
                 feeds.push_back(PostData{root["items"][i]["summary"]["content"].asString(), root["items"][i]["title"].asString(), root["items"][i]["id"].asString()});
-        }
 
         return &(feeds);
 
@@ -160,20 +155,21 @@ const vector<PostData>* FeedlyProvider::giveStreamPosts(const string& category){
 bool FeedlyProvider::markPostsRead(const vector<string>* ids){
         FILE* data_holder = fopen("temp.txt", "wb");
         int i = 0;
-        Json::Value fromScratch;
+
+        Json::Value jsonCont;
         Json::Value array;
 
-        fromScratch["type"] = "entries";
-        fromScratch["action"] = "markAsRead";
-
-        //string document = "{\"entryIds\":[],\"type\": \"entries\",\"action\": \"markAsRead\"}";
+        jsonCont["type"] = "entries";
 
         for(std::vector<string>::const_iterator it = ids->begin(); it != ids->end(); ++it)
                 array.append("entryIds") = *it;
-        fromScratch["entryIds"] = array;
+
+        jsonCont["entryIds"] = array;
+        jsonCont["action"] = "markAsRead";
 
         Json::StyledWriter writer;
-        string document = writer.write(fromScratch); 
+        string document = writer.write(jsonCont); 
+        system(string("echo \'" + document + "\' > check").c_str());
 
         curl = curl_easy_init();
 
@@ -181,10 +177,14 @@ bool FeedlyProvider::markPostsRead(const vector<string>* ids){
         chunk = curl_slist_append(chunk, "Content-Type: application/json");
         chunk = curl_slist_append(chunk, ("Authorization: OAuth " + user_data.authToken).c_str());
 
-        curl_easy_setopt(curl, CURLOPT_URL, (string(FEEDLY_URI) + "markers").c_str());
+        enableVerbose();
+
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/4.0");
+        curl_easy_setopt(curl, CURLOPT_URL, ("https://sandbox.feedly.com/v3/markers"));
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, data_holder);
-        curl_easy_setopt(curl, CURLOPT_POST, 1);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, curl_easy_escape(curl, document.c_str(), 0));
+        curl_easy_setopt(curl, CURLOPT_POST, true);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, document.c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
 
         curl_res = curl_easy_perform(curl);
         if(curl_res == CURLE_OK){
@@ -278,6 +278,7 @@ void FeedlyProvider::curl_retrive(const string& uri){
         curl_res = curl_easy_perform(curl);
 
         fclose(data_holder);
+        curl_easy_cleanup(curl);
 }
 void FeedlyProvider::curl_cleanup(){
         curl_global_cleanup();
