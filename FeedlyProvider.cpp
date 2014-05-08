@@ -10,8 +10,7 @@ using namespace std;
 
 FeedlyProvider::FeedlyProvider(){
         curl_global_init(CURL_GLOBAL_DEFAULT);
-        verboseFlag = true;
-//        feeds = new vector<PostData>;
+        verboseFlag = false;
 }
 void FeedlyProvider::authenticateUser(const string& email, const string& passwd){
         getCookies();
@@ -181,6 +180,54 @@ bool FeedlyProvider::markPostsRead(const vector<string>* ids){
 
         curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/4.0");
         curl_easy_setopt(curl, CURLOPT_URL, ("https://sandbox.feedly.com/v3/markers"));
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, data_holder);
+        curl_easy_setopt(curl, CURLOPT_POST, true);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, document.c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
+
+        curl_res = curl_easy_perform(curl);
+        if(curl_res == CURLE_OK){
+                return true;
+        }
+        else{
+                cerr << "Could not mark post(s) as read" << endl;
+                return false;
+        }
+
+        curl_easy_cleanup(curl);
+
+        fclose(data_holder);
+        return false;
+}
+bool FeedlyProvider::markCategoriesRead(const string& id, const string& lastReadEntryId){ 
+        FILE* data_holder = fopen("temp.txt", "wb");
+        int i = 0;
+
+        Json::Value jsonCont;
+        Json::Value array;
+
+        jsonCont["type"] = "categories";
+
+        array.append("categoryIds") = id;
+
+        jsonCont["lastReadEntryId"] = lastReadEntryId;
+        jsonCont["categoryIds"] = array;
+        jsonCont["action"] = "markAsRead";
+
+        Json::StyledWriter writer;
+        string document = writer.write(jsonCont); 
+        system(string("echo \'" + document + "\' > check").c_str());
+
+        curl = curl_easy_init();
+
+        struct curl_slist *chunk = NULL;
+        chunk = curl_slist_append(chunk, "Content-Type: application/json");
+        chunk = curl_slist_append(chunk, ("Authorization: OAuth " + user_data.authToken).c_str());
+
+        enableVerbose();
+
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/4.0");
+        curl_easy_setopt(curl, CURLOPT_URL, (string(FEEDLY_URI) + "markers").c_str());
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, data_holder);
         curl_easy_setopt(curl, CURLOPT_POST, true);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, document.c_str());
