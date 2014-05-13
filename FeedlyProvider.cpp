@@ -115,6 +115,9 @@ const map<string, string>* FeedlyProvider::getLabels(){
                 cerr << "ERROR: Failed to Retrive Categories" << endl;
                 return NULL;
         }
+        user_data.categories["All"] = "user/" + user_data.id + "/category/global.all"; 
+        user_data.categories["Saved"] = "user/" + user_data.id + "/tag/global.saved"; 
+        user_data.categories["Uncategorized"] = "user/" + user_data.id + "/category/global.uncategorized"; 
 
         for(int i = 0; i < root.size(); i++)
                 user_data.categories[(root[i]["label"]).asString()] = root[i]["id"].asString();
@@ -124,8 +127,10 @@ const map<string, string>* FeedlyProvider::getLabels(){
 const vector<PostData>* FeedlyProvider::giveStreamPosts(const string& category){
         feeds.clear(); 
 
-        if(category.compare("All") == 0)
+        if(category == "All")
                 curl_retrive("streams/contents?ranked=newest&count=" + to_string(DEFAULT_FCOUNT) + "&unreadOnly=true&streamId=" + string(curl_easy_escape(curl, ("user/"+ user_data.id + "/category/global.all").c_str(), 0)));
+        else if(category == "Uncategorized")
+                curl_retrive("streams/contents?ranked=newest&count=" + to_string(DEFAULT_FCOUNT) + "&unreadOnly=true&streamId=" + string(curl_easy_escape(curl, ("user/"+ user_data.id + "/category/global.uncategorized").c_str(), 0)));
         else
                 curl_retrive("streams/" + string(curl_easy_escape(curl, user_data.categories[category].c_str(), 0)) + "/contents?unreadOnly=true&ranked=newest&count=" + to_string(DEFAULT_FCOUNT));
 
@@ -147,6 +152,8 @@ const vector<PostData>* FeedlyProvider::giveStreamPosts(const string& category){
 
         for(int i = 0; i < root["items"].size(); i++)
                 feeds.push_back(PostData{root["items"][i]["summary"]["content"].asString(), root["items"][i]["title"].asString(), root["items"][i]["id"].asString()});
+
+        data.close();
 
         return &(feeds);
 
@@ -199,7 +206,7 @@ bool FeedlyProvider::markPostsRead(const vector<string>* ids){
         fclose(data_holder);
         return false;
 }
-bool FeedlyProvider::markCategoriesRead(const string& id, const string& lastReadEntryId){ 
+bool FeedlyProvider::markCategoriesRead(const string& id, const string& lastReadEntryId){
         FILE* data_holder = fopen("temp.txt", "wb");
         int i = 0;
 
@@ -250,6 +257,10 @@ bool FeedlyProvider::markCategoriesRead(const string& id, const string& lastRead
 
 PostData* FeedlyProvider::getSinglePostData(const int index){
         return &(feeds[index]);
+}
+
+const string FeedlyProvider::getUserId(){
+        return user_data.id; 
 }
 
 void FeedlyProvider::getCookies(){

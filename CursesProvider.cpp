@@ -95,7 +95,7 @@ void CursesProvider::control(){
                         case 'k':
                                 menu_driver(curMenu, REQ_UP_ITEM);
                                 break;
-                        case 'a':
+                        case 'A':
                                 feedly.markCategoriesRead(item_description(current_item(ctgMenu)), lastEntryRead);
                                 ctgMenuCallback(strdup(item_name(curItem)));
                                 currentCategoryRead = true;
@@ -125,13 +125,11 @@ void CursesProvider::control(){
         cleanup();
 }
 void CursesProvider::createCategoriesMenu(){
-        int n_choices, c, i = 2;
+        int n_choices, c, i = 0;
 
-        n_choices = labels->size() + 2;
-        ctgItems = (ITEM **)calloc(sizeof(std::map<string, string>::value_type)*n_choices, sizeof(ITEM *));
+        n_choices = labels->size();
+        ctgItems = (ITEM **)calloc(sizeof(std::string::value_type)*n_choices, sizeof(ITEM *));
 
-        ctgItems[0] = new_item("All", "");
-        ctgItems[1] = new_item("Saved", "");
 
         for(std::map<string, string>::const_iterator it = labels->begin(); it != labels->end(); ++it){
                 ctgItems[i] = new_item((it->first).c_str(), (it->second).c_str());
@@ -162,15 +160,23 @@ void CursesProvider::createPostsMenu(){
 
         const vector<PostData> *posts = feedly.giveStreamPosts("All");
 
-        n_choices = posts->size();
-        postsItems = (ITEM **)calloc(sizeof(std::vector<PostData>::value_type)*n_choices, sizeof(ITEM *));
+        if(posts != NULL){
+                n_choices = posts->size();
+                postsItems = (ITEM **)calloc(sizeof(std::vector<PostData>::value_type)*n_choices, sizeof(ITEM *));
 
-        for(auto it = posts->begin(); it != posts->end(); ++it){
-                postsItems[i] = new_item((it->title).c_str(), (it->id).c_str()); 
-                i++;
+                for(auto it = posts->begin(); it != posts->end(); ++it){
+                        postsItems[i] = new_item((it->title).c_str(), (it->id).c_str()); 
+                        i++;
+                }
+
+                postsMenu = new_menu((ITEM **)postsItems);
+                lastEntryRead = item_description(postsItems[0]);
         }
-
-        postsMenu = new_menu((ITEM **)postsItems);
+        else{
+                postsMenu = new_menu(NULL);
+                print_in_center(postsWin, 3, 1, height, width-4, strdup("All Posts Read"), 1);  
+                currentCategoryRead = true;
+        }
 
         postsWin = newwin(LINES-2, 0, 0, 40);
         keypad(postsWin, TRUE);
@@ -270,7 +276,7 @@ void CursesProvider::win_show(WINDOW *win, char *label, int label_color){
 
         print_in_middle(win, 1, 0, width, label, COLOR_PAIR(label_color));
 }
-void CursesProvider::print_in_middle(WINDOW *win, int starty, int startx, int width, char *string, chtype color){   
+void CursesProvider::print_in_middle(WINDOW *win, int starty, int startx, int width, char *str, chtype color){   
         int length, x, y;
         float temp;
 
@@ -284,14 +290,14 @@ void CursesProvider::print_in_middle(WINDOW *win, int starty, int startx, int wi
         if(width == 0)
                 width = 80;
 
-        length = strlen(string);
+        length = strlen(str);
         temp = (width - length)/ 2;
         x = startx + (int)temp;
         wattron(win, color);
-        mvwprintw(win, y, x, "%s", string);
+        mvwprintw(win, y, x, "%s", str);
         wattroff(win, color);
 }
-void CursesProvider::print_in_center(WINDOW *win, int starty, int startx, int height, int width, char *string, chtype color){   
+void CursesProvider::print_in_center(WINDOW *win, int starty, int startx, int height, int width, char *str, chtype color){   
         int length, x, y;
         float tempX, tempY;
 
@@ -305,13 +311,13 @@ void CursesProvider::print_in_center(WINDOW *win, int starty, int startx, int he
         if(width == 0)
                 width = 80;
 
-        length = strlen(string);
+        length = strlen(str);
         tempX = (width - length)/ 2;
         tempY = (height / 2);
         x = startx + (int)tempX;
         y = starty + (int)tempY; 
         wattron(win, color);
-        mvwprintw(win, y, x, "%s", string);
+        mvwprintw(win, y, x, "%s", str);
         wattroff(win, color);
 }
 void CursesProvider::cleanup(){

@@ -42,6 +42,7 @@ class FeedlyProvider{
                 bool markCategoriesRead(const string& id, const string& lastReadEntryId);
                 const vector<PostData>* giveStreamPosts(const string& category);
                 const map<string, string>* getLabels();
+                const string getUserId();
                 PostData* getSinglePostData(const int index);
                 void curl_cleanup();
         private:
