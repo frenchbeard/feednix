@@ -40,6 +40,7 @@ class FeedlyProvider{
                 void authenticateUser(const string& email, const string& passwd);
                 bool markPostsRead(const vector<string>* ids);
                 bool markCategoriesRead(const string& id, const string& lastReadEntryId);
+                bool markPostsUnread(const vector<string>* ids);
                 const vector<PostData>* giveStreamPosts(const string& category);
                 const map<string, string>* getLabels();
                 const string getUserId();

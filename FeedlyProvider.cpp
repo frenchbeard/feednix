@@ -128,9 +128,11 @@ const vector<PostData>* FeedlyProvider::giveStreamPosts(const string& category){
         feeds.clear(); 
 
         if(category == "All")
-                curl_retrive("streams/contents?ranked=newest&count=" + to_string(DEFAULT_FCOUNT) + "&unreadOnly=true&streamId=" + string(curl_easy_escape(curl, ("user/"+ user_data.id + "/category/global.all").c_str(), 0)));
+                curl_retrive("streams/contents?ranked=newest&count=" + to_string(DEFAULT_FCOUNT) + "&unreadOnly=true&streamId=" + string(curl_easy_escape(curl, (user_data.categories["All"]).c_str(), 0)));
         else if(category == "Uncategorized")
-                curl_retrive("streams/contents?ranked=newest&count=" + to_string(DEFAULT_FCOUNT) + "&unreadOnly=true&streamId=" + string(curl_easy_escape(curl, ("user/"+ user_data.id + "/category/global.uncategorized").c_str(), 0)));
+                curl_retrive("streams/contents?ranked=newest&count=" + to_string(DEFAULT_FCOUNT) + "&unreadOnly=true&streamId=" + string(curl_easy_escape(curl, (user_data.categories["Uncategorized"]).c_str(), 0)));
+        else if(category == "Saved")
+                curl_retrive("streams/contents?ranked=newest&count=" + to_string(DEFAULT_FCOUNT) + "&unreadOnly=true&streamId=" + string(curl_easy_escape(curl, (user_data.categories["Saved"]).c_str(), 0)));
         else
                 curl_retrive("streams/" + string(curl_easy_escape(curl, user_data.categories[category].c_str(), 0)) + "/contents?unreadOnly=true&ranked=newest&count=" + to_string(DEFAULT_FCOUNT));
 
@@ -172,6 +174,54 @@ bool FeedlyProvider::markPostsRead(const vector<string>* ids){
 
         jsonCont["entryIds"] = array;
         jsonCont["action"] = "markAsRead";
+
+        Json::StyledWriter writer;
+        string document = writer.write(jsonCont); 
+        system(string("echo \'" + document + "\' > check").c_str());
+
+        curl = curl_easy_init();
+
+        struct curl_slist *chunk = NULL;
+        chunk = curl_slist_append(chunk, "Content-Type: application/json");
+        chunk = curl_slist_append(chunk, ("Authorization: OAuth " + user_data.authToken).c_str());
+
+        enableVerbose();
+
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/4.0");
+        curl_easy_setopt(curl, CURLOPT_URL, ("https://sandbox.feedly.com/v3/markers"));
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, data_holder);
+        curl_easy_setopt(curl, CURLOPT_POST, true);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, document.c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
+
+        curl_res = curl_easy_perform(curl);
+        if(curl_res == CURLE_OK){
+                return true;
+        }
+        else{
+                cerr << "Could not mark post(s) as read" << endl;
+                return false;
+        }
+
+        curl_easy_cleanup(curl);
+
+        fclose(data_holder);
+        return false;
+}
+bool FeedlyProvider::markPostsUnread(const vector<string>* ids){
+        FILE* data_holder = fopen("temp.txt", "wb");
+        int i = 0;
+
+        Json::Value jsonCont;
+        Json::Value array;
+
+        jsonCont["type"] = "entries";
+
+        for(std::vector<string>::const_iterator it = ids->begin(); it != ids->end(); ++it)
+                array.append("entryIds") = *it;
+
+        jsonCont["entryIds"] = array;
+        jsonCont["action"] = "keepUnread";
 
         Json::StyledWriter writer;
         string document = writer.write(jsonCont); 

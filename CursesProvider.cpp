@@ -60,7 +60,7 @@ void CursesProvider::init(){
         update_panels();
 
         attron(COLOR_PAIR(4));
-        mvprintw(LINES - 2, 0, "a: mark all read  r: mark single read  R: refresh F1: exit");
+        mvprintw(LINES - 1, 0, "A: mark all read  u: mark unread  r: mark read  R: refresh  F1: exit");
         attroff(COLOR_PAIR(4));
         doupdate();
 
@@ -70,9 +70,10 @@ void CursesProvider::init(){
 void CursesProvider::control(){
         int ch;
         MENU* curMenu = postsMenu;
+        ITEM* curItem = current_item(curMenu);
 
         while((ch = getch()) != KEY_F(1)){
-                ITEM* curItem = current_item(curMenu);
+                curItem = current_item(curMenu);
                 switch(ch){
                         case 9:
                                 if(curMenu == ctgMenu)
@@ -95,29 +96,50 @@ void CursesProvider::control(){
                         case 'k':
                                 menu_driver(curMenu, REQ_UP_ITEM);
                                 break;
+                        case 'u':{
+                                         vector<string> *temp = new vector<string>;
+                                         temp->push_back(item_description(curItem));
+
+                                         feedly.markPostsUnread(temp);
+                                         item_opts_on(curItem, O_SELECTABLE);
+
+                                         break;
+                                 }
+                        case 'r':{
+                                         vector<string> *temp = new vector<string>;
+                                         temp->push_back(item_description(curItem));
+
+                                         feedly.markPostsRead(temp);
+                                         item_opts_on(curItem, O_SELECTABLE);
+
+                                         break;
+                                 }
+                        case 'R':
+                                 ctgMenuCallback(strdup(item_name(current_item(ctgMenu))));
+                                 break;
                         case 'A':
-                                feedly.markCategoriesRead(item_description(current_item(ctgMenu)), lastEntryRead);
-                                ctgMenuCallback(strdup(item_name(curItem)));
-                                currentCategoryRead = true;
-                                break;
+                                 feedly.markCategoriesRead(item_description(current_item(ctgMenu)), lastEntryRead);
+                                 ctgMenuCallback(strdup(item_name(curItem)));
+                                 currentCategoryRead = true;
+                                 break;
                         case 10:
-                                if(curMenu == ctgMenu){
-                                        top = (PANEL *)panel_userptr(top);
-                                        top_panel(top);
+                                 if(curMenu == ctgMenu){
+                                         top = (PANEL *)panel_userptr(top);
+                                         top_panel(top);
 
-                                        wclear(postsWin);
-                                        ctgMenuCallback(strdup(item_name(current_item(curMenu))));
+                                         wclear(postsWin);
+                                         ctgMenuCallback(strdup(item_name(current_item(curMenu))));
 
-                                        win_show(postsWin, strdup("Posts"), 1);
-                                        if(currentCategoryRead)
-                                                curMenu = ctgMenu;
-                                        else
-                                                curMenu = postsMenu;
-                                }
-                                else if(panel_window(top) == postsWin){
-                                        postsMenuCallback(curItem);
-                                }
-                                break;
+                                         win_show(postsWin, strdup("Posts"), 1);
+                                         if(currentCategoryRead)
+                                                 curMenu = ctgMenu;
+                                         else
+                                                 curMenu = postsMenu;
+                                 }
+                                 else if(panel_window(top) == postsWin){
+                                         postsMenuCallback(curItem);
+                                 }
+                                 break;
                 }
                 update_panels();
                 doupdate();
@@ -125,15 +147,20 @@ void CursesProvider::control(){
         cleanup();
 }
 void CursesProvider::createCategoriesMenu(){
-        int n_choices, c, i = 0;
+        int n_choices, c, i = 3;
 
         n_choices = labels->size();
         ctgItems = (ITEM **)calloc(sizeof(std::string::value_type)*n_choices, sizeof(ITEM *));
 
+        ctgItems[0] = new_item("All", labels->at("All").c_str());
+        ctgItems[1] = new_item("Saved", labels->at("Saved").c_str());
+        ctgItems[2] = new_item("Uncategorized", labels->at("Uncategorized").c_str());
 
-        for(std::map<string, string>::const_iterator it = labels->begin(); it != labels->end(); ++it){
-                ctgItems[i] = new_item((it->first).c_str(), (it->second).c_str());
-                i++;
+        for(auto it = labels->begin(); it != labels->end(); ++it){
+                if(it->first.compare("All") != 0 && it->first.compare("Saved") != 0 && it->first.compare("Uncategorized") != 0){
+                        ctgItems[i] = new_item((it->first).c_str(), (it->second).c_str());
+                        i++;
+                }
         }
 
         ctgMenu = new_menu((ITEM **)ctgItems);
