@@ -4,22 +4,20 @@
 #include <iterator>
 #include <istream>
 
-using namespace std;
-
 #include "FeedlyProvider.h"
 
 FeedlyProvider::FeedlyProvider(){
         curl_global_init(CURL_GLOBAL_DEFAULT);
         verboseFlag = false;
 }
-void FeedlyProvider::authenticateUser(const string& email, const string& passwd){
+void FeedlyProvider::authenticateUser(const std::string& email, const std::string& passwd){
         getCookies();
 
         FILE* data_holder = fopen("temp.txt", "wb");
 
         curl = curl_easy_init();
 
-        curl_easy_setopt(curl, CURLOPT_URL, string(GOOGLE_AUTH_URL).c_str()); 
+        curl_easy_setopt(curl, CURLOPT_URL, std::string(GOOGLE_AUTH_URL).c_str()); 
         curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/4.0");
         curl_easy_setopt(curl, CURLOPT_AUTOREFERER, 1 );
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
@@ -31,9 +29,9 @@ void FeedlyProvider::authenticateUser(const string& email, const string& passwd)
 
         curl_res = curl_easy_perform(curl);
 
-        curl_easy_setopt(curl, CURLOPT_REFERER, string(GOOGLE_AUTH_URL).c_str());
+        curl_easy_setopt(curl, CURLOPT_REFERER, std::string(GOOGLE_AUTH_URL).c_str());
         curl_easy_setopt(curl, CURLOPT_POST, 1);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, string("signIn=Sign+in&_utf8=&#9731;&bgresponse=js_disabled&GALX=" + user_data.galx + "&pstMsg=&dnCon=&checkConnection=youtube:1141:1&checkedDomains=youtube&Email=jorgemartinezhernandez&Passwd=trueforerunner117").c_str());
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, std::string("signIn=Sign+in&_utf8=&#9731;&bgresponse=js_disabled&GALX=" + user_data.galx + "&pstMsg=&dnCon=&checkConnection=youtube:1141:1&checkedDomains=youtube&Email=jorgemartinezhernandez&Passwd=trueforerunner117").c_str());
 
         curl_res = curl_easy_perform(curl);
 
@@ -41,7 +39,7 @@ void FeedlyProvider::authenticateUser(const string& email, const string& passwd)
 
         if(curl_res == CURLE_OK){
                 curl_res = curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &currentURL);
-                string tempCode(currentURL);
+                std::string tempCode(currentURL);
 
                 if((curl_res == CURLE_OK) && currentURL){
                         unsigned codeIndex = tempCode.find("code=") + 5;
@@ -51,7 +49,7 @@ void FeedlyProvider::authenticateUser(const string& email, const string& passwd)
                 }
         }
         else{
-                cerr << "ERROR: Could not authenticate user" << endl;
+                std::cerr << "ERROR: Could not authenticate user" << std::endl;
                 fprintf(stderr, "curl_easy_perform() failed : %s\n", curl_easy_strerror(curl_res));
         }
 
@@ -64,7 +62,7 @@ void FeedlyProvider::parseAuthenticationResponse(){
         struct curl_httppost *formpost = NULL;
         FILE *tokenJSON = fopen("tokenFile.json", "wb");
 
-        feedly_url = FEEDLY_URI + string("auth/token?code=") + user_data.code +  CLIENT_ID +  CLIENT_SECRET +  REDIRECT_URI + SCOPE + "&grant_type=authorization_code";
+        feedly_url = FEEDLY_URI + std::string("auth/token?code=") + user_data.code +  CLIENT_ID +  CLIENT_SECRET +  REDIRECT_URI + SCOPE + "&grant_type=authorization_code";
 
         curl_easy_setopt(curl, CURLOPT_URL, feedly_url.c_str());
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, true);
@@ -82,7 +80,7 @@ void FeedlyProvider::parseAuthenticationResponse(){
         Json::Value root;
         Json::Reader reader;
 
-        ifstream tokenFile("tokenFile.json", ifstream::binary);
+        std::ifstream tokenFile("tokenFile.json", std::ifstream::binary);
 
         if(tokenJSON != NULL && curl_res == CURLE_OK){
                 parsingSuccesful = reader.parse(tokenFile, root);
@@ -95,12 +93,12 @@ void FeedlyProvider::parseAuthenticationResponse(){
         }
 
         if(!parsingSuccesful)
-                cerr << "ERROR: Failed to parse tokens file: " << reader.getFormatedErrorMessages() << endl;
+                std::cerr << "ERROR: Failed to parse tokens file: " << reader.getFormatedErrorMessages() << std::endl;
         if(curl_res != CURLE_OK)
                 fprintf(stderr, "curl_easy_perform() failed : %s\n", curl_easy_strerror(curl_res));
 
 } 
-const map<string, string>* FeedlyProvider::getLabels(){
+const std::map<std::string, std::string>* FeedlyProvider::getLabels(){
         curl_retrive("categories");
 
         Json::Reader reader;
@@ -108,11 +106,11 @@ const map<string, string>* FeedlyProvider::getLabels(){
 
         bool parsingSuccesful;
 
-        ifstream data("temp.txt", ifstream::binary);
+        std::ifstream data("temp.txt", std::ifstream::binary);
         parsingSuccesful = reader.parse(data, root);
 
         if(data == NULL || curl_res != CURLE_OK || !parsingSuccesful){
-                cerr << "ERROR: Failed to Retrive Categories" << endl;
+                std::cerr << "ERROR: Failed to Retrive Categories" << std::endl;
                 return NULL;
         }
         user_data.categories["All"] = "user/" + user_data.id + "/category/global.all"; 
@@ -124,28 +122,28 @@ const map<string, string>* FeedlyProvider::getLabels(){
 
         return &(user_data.categories);
 }
-const vector<PostData>* FeedlyProvider::giveStreamPosts(const string& category){
+const std::vector<PostData>* FeedlyProvider::giveStreamPosts(const std::string& category){
         feeds.clear(); 
 
         if(category == "All")
-                curl_retrive("streams/contents?ranked=newest&count=" + to_string(DEFAULT_FCOUNT) + "&unreadOnly=true&streamId=" + string(curl_easy_escape(curl, (user_data.categories["All"]).c_str(), 0)));
+                curl_retrive("streams/contents?ranked=newest&count=" + std::to_string(DEFAULT_FCOUNT) + "&unreadOnly=true&streamId=" + std::string(curl_easy_escape(curl, (user_data.categories["All"]).c_str(), 0)));
         else if(category == "Uncategorized")
-                curl_retrive("streams/contents?ranked=newest&count=" + to_string(DEFAULT_FCOUNT) + "&unreadOnly=true&streamId=" + string(curl_easy_escape(curl, (user_data.categories["Uncategorized"]).c_str(), 0)));
+                curl_retrive("streams/contents?ranked=newest&count=" + std::to_string(DEFAULT_FCOUNT) + "&unreadOnly=true&streamId=" + std::string(curl_easy_escape(curl, (user_data.categories["Uncategorized"]).c_str(), 0)));
         else if(category == "Saved")
-                curl_retrive("streams/contents?ranked=newest&count=" + to_string(DEFAULT_FCOUNT) + "&unreadOnly=true&streamId=" + string(curl_easy_escape(curl, (user_data.categories["Saved"]).c_str(), 0)));
+                curl_retrive("streams/contents?ranked=newest&count=" + std::to_string(DEFAULT_FCOUNT) + "&unreadOnly=true&streamId=" + std::string(curl_easy_escape(curl, (user_data.categories["Saved"]).c_str(), 0)));
         else
-                curl_retrive("streams/" + string(curl_easy_escape(curl, user_data.categories[category].c_str(), 0)) + "/contents?unreadOnly=true&ranked=newest&count=" + to_string(DEFAULT_FCOUNT));
+                curl_retrive("streams/" + std::string(curl_easy_escape(curl, user_data.categories[category].c_str(), 0)) + "/contents?unreadOnly=true&ranked=newest&count=" + std::to_string(DEFAULT_FCOUNT));
 
         Json::Reader reader;
         Json::Value root;
 
         bool parsingSuccesful;
 
-        ifstream data("temp.txt", ifstream::binary);
+        std::ifstream data("temp.txt", std::ifstream::binary);
         parsingSuccesful = reader.parse(data, root);
 
         if(data == NULL || curl_res != CURLE_OK || !parsingSuccesful){ 
-                cerr << "ERROR: Failed to Retrive Categories" << endl;
+                std::cerr << "ERROR: Failed to Retrive Categories" << std::endl;
                 return NULL;
         }
 
@@ -160,7 +158,7 @@ const vector<PostData>* FeedlyProvider::giveStreamPosts(const string& category){
         return &(feeds);
 
 }
-bool FeedlyProvider::markPostsRead(const vector<string>* ids){
+bool FeedlyProvider::markPostsRead(const std::vector<std::string>* ids){
         FILE* data_holder = fopen("temp.txt", "wb");
         int i = 0;
 
@@ -169,15 +167,15 @@ bool FeedlyProvider::markPostsRead(const vector<string>* ids){
 
         jsonCont["type"] = "entries";
 
-        for(std::vector<string>::const_iterator it = ids->begin(); it != ids->end(); ++it)
+        for(std::vector<std::string>::const_iterator it = ids->begin(); it != ids->end(); ++it)
                 array.append("entryIds") = *it;
 
         jsonCont["entryIds"] = array;
         jsonCont["action"] = "markAsRead";
 
         Json::StyledWriter writer;
-        string document = writer.write(jsonCont); 
-        system(string("echo \'" + document + "\' > check").c_str());
+        std::string document = writer.write(jsonCont); 
+        system(std::string("echo \'" + document + "\' > check").c_str());
 
         curl = curl_easy_init();
 
@@ -199,7 +197,7 @@ bool FeedlyProvider::markPostsRead(const vector<string>* ids){
                 return true;
         }
         else{
-                cerr << "Could not mark post(s) as read" << endl;
+                std::cerr << "Could not mark post(s) as read" << std::endl;
                 return false;
         }
 
@@ -208,7 +206,7 @@ bool FeedlyProvider::markPostsRead(const vector<string>* ids){
         fclose(data_holder);
         return false;
 }
-bool FeedlyProvider::markPostsUnread(const vector<string>* ids){
+bool FeedlyProvider::markPostsUnread(const std::vector<std::string>* ids){
         FILE* data_holder = fopen("temp.txt", "wb");
         int i = 0;
 
@@ -217,15 +215,15 @@ bool FeedlyProvider::markPostsUnread(const vector<string>* ids){
 
         jsonCont["type"] = "entries";
 
-        for(std::vector<string>::const_iterator it = ids->begin(); it != ids->end(); ++it)
+        for(std::vector<std::string>::const_iterator it = ids->begin(); it != ids->end(); ++it)
                 array.append("entryIds") = *it;
 
         jsonCont["entryIds"] = array;
         jsonCont["action"] = "keepUnread";
 
         Json::StyledWriter writer;
-        string document = writer.write(jsonCont); 
-        system(string("echo \'" + document + "\' > check").c_str());
+        std::string document = writer.write(jsonCont); 
+        system(std::string("echo \'" + document + "\' > check").c_str());
 
         curl = curl_easy_init();
 
@@ -247,7 +245,7 @@ bool FeedlyProvider::markPostsUnread(const vector<string>* ids){
                 return true;
         }
         else{
-                cerr << "Could not mark post(s) as read" << endl;
+                std::cerr << "Could not mark post(s) as read" << std::endl;
                 return false;
         }
 
@@ -256,7 +254,7 @@ bool FeedlyProvider::markPostsUnread(const vector<string>* ids){
         fclose(data_holder);
         return false;
 }
-bool FeedlyProvider::markCategoriesRead(const string& id, const string& lastReadEntryId){
+bool FeedlyProvider::markCategoriesRead(const std::string& id, const std::string& lastReadEntryId){
         FILE* data_holder = fopen("temp.txt", "wb");
         int i = 0;
 
@@ -272,8 +270,8 @@ bool FeedlyProvider::markCategoriesRead(const string& id, const string& lastRead
         jsonCont["action"] = "markAsRead";
 
         Json::StyledWriter writer;
-        string document = writer.write(jsonCont); 
-        system(string("echo \'" + document + "\' > check").c_str());
+        std::string document = writer.write(jsonCont); 
+        system(std::string("echo \'" + document + "\' > check").c_str());
 
         curl = curl_easy_init();
 
@@ -284,7 +282,7 @@ bool FeedlyProvider::markCategoriesRead(const string& id, const string& lastRead
         enableVerbose();
 
         curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/4.0");
-        curl_easy_setopt(curl, CURLOPT_URL, (string(FEEDLY_URI) + "markers").c_str());
+        curl_easy_setopt(curl, CURLOPT_URL, (std::string(FEEDLY_URI) + "markers").c_str());
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, data_holder);
         curl_easy_setopt(curl, CURLOPT_POST, true);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, document.c_str());
@@ -295,7 +293,7 @@ bool FeedlyProvider::markCategoriesRead(const string& id, const string& lastRead
                 return true;
         }
         else{
-                cerr << "Could not mark post(s) as read" << endl;
+                std::cerr << "Could not mark post(s) as read" << std::endl;
                 return false;
         }
 
@@ -304,12 +302,66 @@ bool FeedlyProvider::markCategoriesRead(const string& id, const string& lastRead
         fclose(data_holder);
         return false;
 }
+bool FeedlyProvider::addSubscription(bool newCategory, const std::string& feed, std::vector<std::string> categories, const std::string& title){
+        FILE* data_holder = fopen("temp.txt", "wb");
+        int i = 0;
+
+        Json::Value jsonCont;
+        Json::Value array;
+
+        jsonCont["id"] = "feed/" + feed;
+        jsonCont["title"] = title;
+
+        if(categories.size() > 0){
+                for(auto it = categories.begin(); it != categories.end(); ++it){
+                        jsonCont["categories"][i]["id"] = user_data.categories[*it];
+                        jsonCont["categories"][i]["label"] = *it;
+                        i++;
+                }
+        }
+        else
+                jsonCont["categories"] = Json::Value(Json::arrayValue);
+
+        Json::StyledWriter writer;
+        std::string document = writer.write(jsonCont); 
+        system(std::string("echo \'" + document + "\' > check").c_str());
+
+        curl = curl_easy_init();
+
+        struct curl_slist *chunk = NULL;
+        chunk = curl_slist_append(chunk, "Content-Type: application/json");
+        chunk = curl_slist_append(chunk, ("Authorization: OAuth " + user_data.authToken).c_str());
+
+        enableVerbose();
+
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/4.0");
+        curl_easy_setopt(curl, CURLOPT_URL, (std::string(FEEDLY_URI) + "subscriptions").c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, data_holder);
+        curl_easy_setopt(curl, CURLOPT_POST, true);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, document.c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
+
+        curl_res = curl_easy_perform(curl);
+        if(curl_res == CURLE_OK){
+                return true;
+        }
+        else{
+                std::cerr << "Could not mark post(s) as read" << std::endl;
+                return false;
+        }
+
+        curl_easy_cleanup(curl);
+
+        fclose(data_holder);
+        return false;
+        return false;
+}
 
 PostData* FeedlyProvider::getSinglePostData(const int index){
         return &(feeds[index]);
 }
 
-const string FeedlyProvider::getUserId(){
+const std::string FeedlyProvider::getUserId(){
         return user_data.id; 
 }
 
@@ -318,7 +370,7 @@ void FeedlyProvider::getCookies(){
 
         curl = curl_easy_init();
 
-        curl_easy_setopt(curl, CURLOPT_URL, string(GOOGLE_AUTH_URL).c_str()); 
+        curl_easy_setopt(curl, CURLOPT_URL, std::string(GOOGLE_AUTH_URL).c_str()); 
         curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/4.0");
         curl_easy_setopt(curl, CURLOPT_AUTOREFERER, 1 );
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
@@ -334,9 +386,9 @@ void FeedlyProvider::getCookies(){
         curl = curl_easy_init();
 
         extract_galx_value();
-        curl_easy_setopt(curl, CURLOPT_REFERER, string(GOOGLE_AUTH_URL).c_str());
+        curl_easy_setopt(curl, CURLOPT_REFERER, std::string(GOOGLE_AUTH_URL).c_str());
         curl_easy_setopt(curl, CURLOPT_POST, 1);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, string("signIn=Sign+in&_utf8=&#9731;&bgresponse=js_disabled&GALX=" + user_data.galx + "&pstMsg=&dnCon=&checkConnection=youtube:1141:1&checkedDomains=youtube&Email=jorgemartinezhernandez&Passwd=trueforerunner117").c_str());
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, std::string("signIn=Sign+in&_utf8=&#9731;&bgresponse=js_disabled&GALX=" + user_data.galx + "&pstMsg=&dnCon=&checkConnection=youtube:1141:1&checkedDomains=youtube&Email=jorgemartinezhernandez&Passwd=trueforerunner117").c_str());
 
         curl_res = curl_easy_perform(curl);
 
@@ -349,15 +401,15 @@ void FeedlyProvider::enableVerbose(){
                 curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
 }
 void FeedlyProvider::extract_galx_value(){
-        string l;
-        ifstream temp("cookie");
+        std::string l;
+        std::ifstream temp("cookie");
         size_t index , last;
 
         if(temp.is_open()){
                 while(getline(temp, l)){
                         index = l.rfind("GALX");
 
-                        if(index > 0 && index != string::npos){
+                        if(index > 0 && index != std::string::npos){
                                 last = l.find("X") + 2;
                                 break;
                         }
@@ -368,14 +420,14 @@ void FeedlyProvider::extract_galx_value(){
         temp.close();
         return;
 }
-void FeedlyProvider::curl_retrive(const string& uri){
+void FeedlyProvider::curl_retrive(const std::string& uri){
         struct curl_slist *chunk = NULL;
 
         FILE* data_holder = fopen("temp.txt", "wb");
         chunk = curl_slist_append(chunk, ("Authorization: OAuth " + user_data.authToken).c_str());
 
         curl = curl_easy_init();
-        curl_easy_setopt(curl, CURLOPT_URL, (string(FEEDLY_URI) + uri).c_str());
+        curl_easy_setopt(curl, CURLOPT_URL, (std::string(FEEDLY_URI) + uri).c_str());
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, true);
         curl_easy_setopt(curl, CURLOPT_AUTOREFERER, true);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, data_holder);

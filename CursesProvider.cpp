@@ -6,6 +6,8 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <sstream>
+#include <iterator>
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
@@ -17,9 +19,9 @@
 
 
 CursesProvider::CursesProvider(){
-        string email, pswd;
-        cout << "Enter email: ";
-        cin >> email;
+        std::string email, pswd;
+        std::cout << "Enter email: ";
+        std::cin >> email;
 
         termios oldt;
         tcgetattr(STDIN_FILENO, &oldt);
@@ -27,8 +29,8 @@ CursesProvider::CursesProvider(){
         newt.c_lflag &= ~ECHO;
         tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-        cout << "Enter password: ";
-        cin >> pswd;
+        std::cout << "Enter password: ";
+        std::cin >> pswd;
         feedly.authenticateUser(email, pswd);
 
         initscr();
@@ -75,6 +77,24 @@ void CursesProvider::control(){
         while((ch = getch()) != KEY_F(1)){
                 curItem = current_item(curMenu);
                 switch(ch){
+                        case 10:
+                                if(curMenu == ctgMenu){
+                                        top = (PANEL *)panel_userptr(top);
+                                        top_panel(top);
+
+                                        wclear(postsWin);
+                                        ctgMenuCallback(strdup(item_name(current_item(curMenu))));
+
+                                        win_show(postsWin, strdup("Posts"), 1);
+                                        if(currentCategoryRead)
+                                                curMenu = ctgMenu;
+                                        else
+                                                curMenu = postsMenu;
+                                }
+                                else if(panel_window(top) == postsWin){
+                                        postsMenuCallback(curItem);
+                                }
+                                break;
                         case 9:
                                 if(curMenu == ctgMenu)
                                         curMenu = postsMenu;
@@ -97,7 +117,7 @@ void CursesProvider::control(){
                                 menu_driver(curMenu, REQ_UP_ITEM);
                                 break;
                         case 'u':{
-                                         vector<string> *temp = new vector<string>;
+                                         std::vector<std::string> *temp = new std::vector<std::string>;
                                          temp->push_back(item_description(curItem));
 
                                          feedly.markPostsUnread(temp);
@@ -106,40 +126,56 @@ void CursesProvider::control(){
                                          break;
                                  }
                         case 'r':{
-                                         vector<string> *temp = new vector<string>;
+                                         std::vector<std::string> *temp = new std::vector<std::string>;
                                          temp->push_back(item_description(curItem));
 
                                          feedly.markPostsRead(temp);
-                                         item_opts_on(curItem, O_SELECTABLE);
+                                         item_opts_off(curItem, O_SELECTABLE);
 
                                          break;
                                  }
                         case 'R':
                                  ctgMenuCallback(strdup(item_name(current_item(ctgMenu))));
                                  break;
-                        case 'A':
-                                 feedly.markCategoriesRead(item_description(current_item(ctgMenu)), lastEntryRead);
-                                 ctgMenuCallback(strdup(item_name(curItem)));
-                                 currentCategoryRead = true;
-                                 break;
-                        case 10:
-                                 if(curMenu == ctgMenu){
-                                         top = (PANEL *)panel_userptr(top);
-                                         top_panel(top);
+                        case 'a':{
+                                         char feed[200];
+                                         char title[200];
+                                         char ctg[200];
+                                         echo();
 
-                                         wclear(postsWin);
-                                         ctgMenuCallback(strdup(item_name(current_item(curMenu))));
+                                         mvprintw(LINES - 2, 0, "[ENTER FEED]:");
+                                         mvgetnstr(LINES-2, strlen("[ENTER FEED]") + 1, feed, 200); 
+                                         mvaddch(LINES-2, 0, ':');
 
-                                         win_show(postsWin, strdup("Posts"), 1);
-                                         if(currentCategoryRead)
-                                                 curMenu = ctgMenu;
-                                         else
-                                                 curMenu = postsMenu;
+                                         clrtoeol();
+
+                                         mvprintw(LINES - 2, 0, "[ENTER TITLE]:");
+                                         mvgetnstr(LINES-2, strlen("[ENTER TITLE]") + 1, title, 200); 
+                                         mvaddch(LINES-2, 0, ':');
+
+                                         clrtoeol();
+
+                                         mvprintw(LINES - 2, 0, "[ENTER CATEGORY]:");
+                                         mvgetnstr(LINES-2, strlen("[ENTER CATEGORY]") + 1, ctg, 200); 
+                                         mvaddch(LINES-2, 0, ':');
+
+                                         std::istringstream ss(ctg);
+                                         std::istream_iterator<std::string> begin(ss), end;
+
+                                         std::vector<std::string> arrayTokens(begin, end);
+
+                                         noecho();
+                                         clrtoeol();
+
+                                         feedly.addSubscription(false, feed, arrayTokens, title); 
+                                         break;
                                  }
-                                 else if(panel_window(top) == postsWin){
-                                         postsMenuCallback(curItem);
+                        case 'A':{
+                                         feedly.markCategoriesRead(item_description(current_item(ctgMenu)), lastEntryRead);
+                                         ctgMenuCallback(strdup(item_name(curItem)));
+                                         currentCategoryRead = true;
+                                         break;
                                  }
-                                 break;
                 }
                 update_panels();
                 doupdate();
@@ -185,7 +221,7 @@ void CursesProvider::createPostsMenu(){
 
         int n_choices, c, i = 0;
 
-        const vector<PostData> *posts = feedly.giveStreamPosts("All");
+        const std::vector<PostData> *posts = feedly.giveStreamPosts("All");
 
         if(posts != NULL){
                 n_choices = posts->size();
@@ -233,7 +269,7 @@ void CursesProvider::ctgMenuCallback(char* label){
         getbegyx(postsWin, starty, startx);
 
         int n_choices, i = 0;
-        const vector<PostData>* posts = feedly.giveStreamPosts(label);
+        const std::vector<PostData>* posts = feedly.giveStreamPosts(label);
 
         if(posts == NULL){
                 unpost_menu(postsMenu);
@@ -268,7 +304,7 @@ void CursesProvider::postsMenuCallback(ITEM* item){
 
         PostData* container = feedly.getSinglePostData(item_index(item));
 
-        ofstream myfile ("example.html");
+        std::ofstream myfile ("example.html");
 
         if (myfile.is_open())
                 myfile << container->content;
@@ -278,12 +314,12 @@ void CursesProvider::postsMenuCallback(ITEM* item){
         def_prog_mode();
         endwin();
 
-        system("w3m example.html");
+        std::system("w3m example.html");
 
-        vector<string> *temp = new vector<string>;
+        std::vector<std::string> *temp = new std::vector<std::string>;
         temp->push_back(container->id);
 
-        feedly.markPostsRead(const_cast<vector<string>*>(temp));
+        feedly.markPostsRead(const_cast<std::vector<std::string>*>(temp));
 
         reset_prog_mode();
 

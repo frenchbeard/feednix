@@ -5,8 +5,6 @@
 #include <map>
 #include <vector>
 
-using namespace std;
-
 #define DEFAULT_FCOUNT 500
 #define FEEDLY_URI "https://sandbox.feedly.com/v3/"
 #define CLIENT_ID "&client_id=sandbox"
@@ -20,44 +18,45 @@ using namespace std;
 #define _PROVIDER_H_
 
 struct UserData{
-        map<string, string> categories;
-        string id;
-        string code;
-        string authToken;
-        string refreshToken;
-        string galx;
+        std::map<std::string, std::string> categories;
+        std::string id;
+        std::string code;
+        std::string authToken;
+        std::string refreshToken;
+        std::string galx;
 };
 
 struct PostData{
-        string content;
-        string title;
-        string id;
+        std::string content;
+        std::string title;
+        std::string id;
 };
 
 class FeedlyProvider{
         public:
                 FeedlyProvider();
-                void authenticateUser(const string& email, const string& passwd);
-                bool markPostsRead(const vector<string>* ids);
-                bool markCategoriesRead(const string& id, const string& lastReadEntryId);
-                bool markPostsUnread(const vector<string>* ids);
-                const vector<PostData>* giveStreamPosts(const string& category);
-                const map<string, string>* getLabels();
-                const string getUserId();
+                void authenticateUser(const std::string& email, const std::string& passwd);
+                bool markPostsRead(const std::vector<std::string>* ids);
+                bool markCategoriesRead(const std::string& id, const std::string& lastReadEntryId);
+                bool markPostsUnread(const std::vector<std::string>* ids);
+                bool addSubscription(bool newCategory, const std::string& feed, std::vector<std::string> categories, const std::string& title = "");
+                const std::vector<PostData>* giveStreamPosts(const std::string& category);
+                const std::map<std::string, std::string>* getLabels();
+                const std::string getUserId();
                 PostData* getSinglePostData(const int index);
                 void curl_cleanup();
         private:
                 CURL *curl;
                 CURLcode curl_res;
-                string feedly_url;
-                string userAuthCode;
+                std::string feedly_url;
+                std::string userAuthCode;
                 UserData user_data;
                 bool verboseFlag;
-                vector<PostData> feeds;
+                std::vector<PostData> feeds;
                 void parseAuthenticationResponse();
                 void getCookies();
                 void enableVerbose();
-                void curl_retrive(const string&);
+                void curl_retrive(const std::string&);
                 void extract_galx_value();
 };
 

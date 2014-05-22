@@ -3,8 +3,6 @@
 #include <menu.h>
 #include <panel.h>
 
-using namespace std;
-
 #ifndef _CURSES_H
 #define _CURSES_H
 
@@ -17,12 +15,12 @@ class CursesProvider{
                 void control();
         private:
                 FeedlyProvider feedly;
-                const map<string, string> *labels;
+                const std::map<std::string, std::string> *labels;
                 WINDOW *ctgWin, *postsWin;
                 PANEL  *panels[2], *top;
                 ITEM **ctgItems, **postsItems;
                 MENU *ctgMenu, *postsMenu;
-                string lastEntryRead;
+                std::string lastEntryRead;
                 bool currentCategoryRead;
                 void createCategoriesMenu(); 
                 void createPostsMenu(); 
