@@ -49,6 +49,7 @@ void CursesProvider::init(){
         init_pair(2, COLOR_GREEN, COLOR_BLACK);
         init_pair(3, COLOR_BLUE, COLOR_BLACK);
         init_pair(4, COLOR_CYAN, COLOR_BLACK);
+        init_pair(5, COLOR_WHITE, COLOR_BLACK);
 
         createCategoriesMenu();
         createPostsMenu();
@@ -85,7 +86,8 @@ void CursesProvider::control(){
                                         wclear(postsWin);
                                         ctgMenuCallback(strdup(item_name(current_item(curMenu))));
 
-                                        win_show(postsWin, strdup("Posts"), 1);
+                                        win_show(postsWin, strdup("Posts"), 1, true);
+                                        win_show(ctgWin, strdup("Categories"), 1, false);
                                         if(currentCategoryRead)
                                                 curMenu = ctgMenu;
                                         else
@@ -96,10 +98,16 @@ void CursesProvider::control(){
                                 }
                                 break;
                         case 9:
-                                if(curMenu == ctgMenu)
+                                if(curMenu == ctgMenu){
                                         curMenu = postsMenu;
-                                else
+                                        win_show(postsWin, strdup("Posts"), 1, true);
+                                        win_show(ctgWin, strdup("Categories"), 1, false);
+                                }
+                                else{
                                         curMenu = ctgMenu;
+                                        win_show(ctgWin, strdup("Categories"), 1, true);
+                                        win_show(postsWin, strdup("Posts"), 1, false);
+                                }
 
                                 top = (PANEL *)panel_userptr(top);
                                 top_panel(top);
@@ -120,7 +128,12 @@ void CursesProvider::control(){
                                          std::vector<std::string> *temp = new std::vector<std::string>;
                                          temp->push_back(item_description(curItem));
 
+                                         mvprintw(LINES-2, 0, "Marking post unread...");
+                                         refresh();
+
                                          feedly.markPostsUnread(temp);
+                                         clear_updateline();
+
                                          item_opts_on(curItem, O_SELECTABLE);
 
                                          break;
@@ -129,13 +142,22 @@ void CursesProvider::control(){
                                          std::vector<std::string> *temp = new std::vector<std::string>;
                                          temp->push_back(item_description(curItem));
 
+                                         mvprintw(LINES-2, 0, "Marking post read...");
+                                         refresh();
+
                                          feedly.markPostsRead(temp);
+                                         clear_updateline();
+
                                          item_opts_off(curItem, O_SELECTABLE);
 
                                          break;
                                  }
                         case 'R':
+                                 mvprintw(LINES-2, 0, "Updating stream...");
+                                 refresh();
+
                                  ctgMenuCallback(strdup(item_name(current_item(ctgMenu))));
+                                 clear_updateline();
                                  break;
                         case 'a':{
                                          char feed[200];
@@ -167,11 +189,22 @@ void CursesProvider::control(){
                                          noecho();
                                          clrtoeol();
 
-                                         feedly.addSubscription(false, feed, arrayTokens, title); 
+                                         mvprintw(LINES-2, 0, "Adding subscription...");
+                                         refresh();
+
+                                         if(strlen(feed) != 0)
+                                                 feedly.addSubscription(false, feed, arrayTokens, title); 
+
+                                         clear_updateline();
                                          break;
                                  }
                         case 'A':{
+                                         mvprintw(LINES-2, 0, "Marking category read...");
+                                         refresh();
+
                                          feedly.markCategoriesRead(item_description(current_item(ctgMenu)), lastEntryRead);
+                                         clear_updateline();
+
                                          ctgMenuCallback(strdup(item_name(curItem)));
                                          currentCategoryRead = true;
                                          break;
@@ -185,7 +218,7 @@ void CursesProvider::control(){
 void CursesProvider::createCategoriesMenu(){
         int n_choices, c, i = 3;
 
-        n_choices = labels->size();
+        n_choices = labels->size() + 1;
         ctgItems = (ITEM **)calloc(sizeof(std::string::value_type)*n_choices, sizeof(ITEM *));
 
         ctgItems[0] = new_item("All", labels->at("All").c_str());
@@ -209,7 +242,7 @@ void CursesProvider::createCategoriesMenu(){
 
         set_menu_mark(ctgMenu, "  ");
 
-        win_show(ctgWin, strdup("Categories"),  1);
+        win_show(ctgWin, strdup("Categories"),  1, false);
 
         menu_opts_off(ctgMenu, O_SHOWDESC);
         menu_opts_on(postsMenu, O_NONCYCLIC);
@@ -256,7 +289,7 @@ void CursesProvider::createPostsMenu(){
 
         set_menu_mark(postsMenu, "*");
 
-        win_show(postsWin, strdup("Posts"),  1);
+        win_show(postsWin, strdup("Posts"),  1, true);
 
         menu_opts_off(postsMenu, O_SHOWDESC);
 
@@ -326,18 +359,35 @@ void CursesProvider::postsMenuCallback(ITEM* item){
         update_panels();
         lastEntryRead = item_description(item);
 }
-void CursesProvider::win_show(WINDOW *win, char *label, int label_color){
+void CursesProvider::win_show(WINDOW *win, char *label, int label_color, bool highlight){
         int startx, starty, height, width;
 
         getbegyx(win, starty, startx);
         getmaxyx(win, height, width);
 
-        box(win, 0, 0);
         mvwaddch(win, 2, 0, ACS_LTEE);
         mvwhline(win, 2, 1, ACS_HLINE, width - 2);
         mvwaddch(win, 2, width - 1, ACS_RTEE);
 
-        print_in_middle(win, 1, 0, width, label, COLOR_PAIR(label_color));
+        if(highlight){
+                wattron(win, COLOR_PAIR(label_color));
+                box(win, 0, 0);
+                mvwaddch(win, 2, 0, ACS_LTEE);
+                mvwhline(win, 2, 1, ACS_HLINE, width - 2);
+                mvwaddch(win, 2, width - 1, ACS_RTEE);
+                print_in_middle(win, 1, 0, width, label, COLOR_PAIR(label_color));
+                wattroff(win, COLOR_PAIR(label_color));
+        }
+        else{
+                wattron(win, COLOR_PAIR(5));
+                box(win, 0, 0);
+                mvwaddch(win, 2, 0, ACS_LTEE);
+                mvwhline(win, 2, 1, ACS_HLINE, width - 2);
+                mvwaddch(win, 2, width - 1, ACS_RTEE);
+                print_in_middle(win, 1, 0, width, label, COLOR_PAIR(5));
+                wattroff(win, COLOR_PAIR(5));
+        }
+
 }
 void CursesProvider::print_in_middle(WINDOW *win, int starty, int startx, int width, char *str, chtype color){   
         int length, x, y;
@@ -356,9 +406,9 @@ void CursesProvider::print_in_middle(WINDOW *win, int starty, int startx, int wi
         length = strlen(str);
         temp = (width - length)/ 2;
         x = startx + (int)temp;
-        wattron(win, color);
+        //wattron(win, color);
         mvwprintw(win, y, x, "%s", str);
-        wattroff(win, color);
+        //wattroff(win, color);
 }
 void CursesProvider::print_in_center(WINDOW *win, int starty, int startx, int height, int width, char *str, chtype color){   
         int length, x, y;
@@ -382,6 +432,10 @@ void CursesProvider::print_in_center(WINDOW *win, int starty, int startx, int he
         wattron(win, color);
         mvwprintw(win, y, x, "%s", str);
         wattroff(win, color);
+}
+void CursesProvider::clear_updateline(){
+        move(LINES-2, 0);
+        clrtoeol();
 }
 void CursesProvider::cleanup(){
         unpost_menu(ctgMenu);
