@@ -30,6 +30,7 @@ struct PostData{
         std::string content;
         std::string title;
         std::string id;
+        std::string originURL;
 };
 
 class FeedlyProvider{
@@ -44,7 +45,9 @@ class FeedlyProvider{
                 const std::map<std::string, std::string>* getLabels();
                 const std::string getUserId();
                 PostData* getSinglePostData(const int index);
+                void setVerbose(bool value);
                 void curl_cleanup();
+                void askForCredentials();
         private:
                 CURL *curl;
                 CURLcode curl_res;
@@ -58,6 +61,7 @@ class FeedlyProvider{
                 void enableVerbose();
                 void curl_retrive(const std::string&);
                 void extract_galx_value();
+                void echo(bool on);
 };
 
 #endif

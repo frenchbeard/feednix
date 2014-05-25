@@ -3,12 +3,27 @@
 #include <jsoncpp/json/json.h>
 #include <iterator>
 #include <istream>
+#include <termios.h>
+#include <unistd.h>
 
 #include "FeedlyProvider.h"
 
 FeedlyProvider::FeedlyProvider(){
         curl_global_init(CURL_GLOBAL_DEFAULT);
         verboseFlag = false;
+}
+void FeedlyProvider::askForCredentials(){
+        std::string email, pswd;
+        std::cout << "Enter email: ";
+        std::cin >> email;
+
+        std::cout << "Enter password: ";
+
+        echo(false);
+        std::cin >> pswd;
+        echo(true);
+
+        authenticateUser(email, pswd);
 }
 void FeedlyProvider::authenticateUser(const std::string& email, const std::string& passwd){
         getCookies();
@@ -36,16 +51,22 @@ void FeedlyProvider::authenticateUser(const std::string& email, const std::strin
         curl_res = curl_easy_perform(curl);
 
         char *currentURL;
+        user_data.code = "";
 
         if(curl_res == CURLE_OK){
                 curl_res = curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &currentURL);
                 std::string tempCode(currentURL);
 
                 if((curl_res == CURLE_OK) && currentURL){
-                        unsigned codeIndex = tempCode.find("code=") + 5;
-                        user_data.code = tempCode.substr(codeIndex, (tempCode.find("&", codeIndex) - codeIndex));
-
-                        parseAuthenticationResponse();
+                        std::size_t codeIndex = tempCode.find("code=") + 5;
+                                user_data.code = tempCode.substr(codeIndex, (tempCode.find("&", codeIndex) - codeIndex));
+                        if(user_data.code.find("google") != std::string::npos){
+                                std::cout << "\nCould not log you in - Try Again" << std::endl; 
+                                askForCredentials();
+                        }
+                        else{
+                                parseAuthenticationResponse();
+                        }
                 }
         }
         else{
@@ -53,7 +74,6 @@ void FeedlyProvider::authenticateUser(const std::string& email, const std::strin
                 fprintf(stderr, "curl_easy_perform() failed : %s\n", curl_easy_strerror(curl_res));
         }
 
-        curl_easy_cleanup(curl);
         fclose(data_holder);
         system("rm tokenFile.json");
         system("rm temp.txt");
@@ -96,6 +116,7 @@ void FeedlyProvider::parseAuthenticationResponse(){
                 std::cerr << "ERROR: Failed to parse tokens file: " << reader.getFormatedErrorMessages() << std::endl;
         if(curl_res != CURLE_OK)
                 fprintf(stderr, "curl_easy_perform() failed : %s\n", curl_easy_strerror(curl_res));
+        curl_easy_cleanup(curl);
 
 } 
 const std::map<std::string, std::string>* FeedlyProvider::getLabels(){
@@ -151,7 +172,7 @@ const std::vector<PostData>* FeedlyProvider::giveStreamPosts(const std::string& 
                 return NULL;
 
         for(int i = 0; i < root["items"].size(); i++)
-                feeds.push_back(PostData{root["items"][i]["summary"]["content"].asString(), root["items"][i]["title"].asString(), root["items"][i]["id"].asString()});
+                feeds.push_back(PostData{root["items"][i]["summary"]["content"].asString(), root["items"][i]["title"].asString(), root["items"][i]["id"].asString(), root["items"][i]["originId"].asString()});
 
         data.close();
 
@@ -354,7 +375,6 @@ bool FeedlyProvider::addSubscription(bool newCategory, const std::string& feed, 
 
         fclose(data_holder);
         return false;
-        return false;
 }
 
 PostData* FeedlyProvider::getSinglePostData(const int index){
@@ -400,10 +420,13 @@ void FeedlyProvider::enableVerbose(){
         if(verboseFlag)
                 curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
 }
+void FeedlyProvider::setVerbose(bool value){
+        verboseFlag = value;
+}
 void FeedlyProvider::extract_galx_value(){
         std::string l;
         std::ifstream temp("cookie");
-        size_t index , last;
+        std::size_t index , last;
 
         if(temp.is_open()){
                 while(getline(temp, l)){
@@ -440,6 +463,19 @@ void FeedlyProvider::curl_retrive(const std::string& uri){
         fclose(data_holder);
         curl_easy_cleanup(curl);
 }
+void FeedlyProvider::echo(bool on = true){
+        struct termios settings;
+        tcgetattr( STDIN_FILENO, &settings );
+        settings.c_lflag = on
+                ? (settings.c_lflag |   ECHO )
+                : (settings.c_lflag & ~(ECHO));
+        tcsetattr( STDIN_FILENO, TCSANOW, &settings );
+}
 void FeedlyProvider::curl_cleanup(){
         curl_global_cleanup();
+        system("rm cookie temp.txt");
+
+        user_data.categories.clear();
+        feeds.clear();
+        user_data = {};
 }

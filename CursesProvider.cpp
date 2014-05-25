@@ -18,20 +18,9 @@
 #define CTRLD   4
 
 
-CursesProvider::CursesProvider(){
-        std::string email, pswd;
-        std::cout << "Enter email: ";
-        std::cin >> email;
-
-        termios oldt;
-        tcgetattr(STDIN_FILENO, &oldt);
-        termios newt = oldt;
-        newt.c_lflag &= ~ECHO;
-        tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-
-        std::cout << "Enter password: ";
-        std::cin >> pswd;
-        feedly.authenticateUser(email, pswd);
+CursesProvider::CursesProvider(bool verbose){
+        feedly.setVerbose(verbose);
+        feedly.askForCredentials();
 
         initscr();
         start_color();
@@ -43,6 +32,7 @@ CursesProvider::CursesProvider(){
         labels = feedly.getLabels();
         lastEntryRead = "";
         currentCategoryRead = false;
+        feedly.setVerbose(false);
 }
 void CursesProvider::init(){
         init_pair(1, COLOR_RED, 0);
@@ -63,7 +53,7 @@ void CursesProvider::init(){
         update_panels();
 
         attron(COLOR_PAIR(4));
-        mvprintw(LINES - 1, 0, "A: mark all read  u: mark unread  r: mark read  R: refresh  F1: exit");
+        mvprintw(LINES - 1, 0, "Enter: See Preview  A: mark all read  u: mark unread  r: mark read  R: refresh  o: Open in plain-text  O: Open in Browser  F1: exit");
         attroff(COLOR_PAIR(4));
         doupdate();
 
@@ -83,8 +73,10 @@ void CursesProvider::control(){
                                         top = (PANEL *)panel_userptr(top);
                                         top_panel(top);
 
-                                        wclear(postsWin);
+                                        mvprintw(LINES-2, 0, "Updating stream...");
+                                        refresh();
                                         ctgMenuCallback(strdup(item_name(current_item(curMenu))));
+                                        clear_updateline();
 
                                         win_show(postsWin, strdup("Posts"), 1, true);
                                         win_show(ctgWin, strdup("Categories"), 1, false);
@@ -94,7 +86,7 @@ void CursesProvider::control(){
                                                 curMenu = postsMenu;
                                 }
                                 else if(panel_window(top) == postsWin){
-                                        postsMenuCallback(curItem);
+                                        postsMenuCallback(curItem, true);
                                 }
                                 break;
                         case 9:
@@ -102,11 +94,25 @@ void CursesProvider::control(){
                                         curMenu = postsMenu;
                                         win_show(postsWin, strdup("Posts"), 1, true);
                                         win_show(ctgWin, strdup("Categories"), 1, false);
+
+                                        move(LINES-1, 0);
+                                        clrtoeol();
+                                        attron(COLOR_PAIR(4));
+                                        mvprintw(LINES - 1, 0, "Enter: See Preview  A: mark all read  u: mark unread  r: mark read  R: refresh  o: Open in plain-text  O: Open in Browser  F1: exit");
+                                        attroff(COLOR_PAIR(4));
+                                        refresh();
                                 }
                                 else{
                                         curMenu = ctgMenu;
                                         win_show(ctgWin, strdup("Categories"), 1, true);
                                         win_show(postsWin, strdup("Posts"), 1, false);
+
+                                        move(LINES-1, 0);
+                                        clrtoeol();
+                                        attron(COLOR_PAIR(4));
+                                        mvprintw(LINES - 1, 0, "Enter: Fetch Stream  A: mark all read  R: refresh  F1: exit");
+                                        attroff(COLOR_PAIR(4));
+                                        refresh();
                                 }
 
                                 top = (PANEL *)panel_userptr(top);
@@ -159,6 +165,30 @@ void CursesProvider::control(){
                                  ctgMenuCallback(strdup(item_name(current_item(ctgMenu))));
                                  clear_updateline();
                                  break;
+                        case 'o':
+                                 postsMenuCallback(curItem, false);
+                                 break;
+                        case 'O':{
+                                 termios oldt;
+                                 tcgetattr(STDIN_FILENO, &oldt);
+                                 termios newt = oldt;
+                                 newt.c_lflag &= ~ECHO;
+                                 tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+                                 PostData* data = feedly.getSinglePostData(item_index(curItem));
+                                 std::vector<std::string> *temp = new std::vector<std::string>;
+                                 temp->push_back(data->id);
+
+                                 system(std::string("xdg-open \"" + data->originURL + "\" > /dev/null").c_str());
+                                 mvprintw(LINES-2, 0, "Marking post read...");
+                                 refresh();
+
+                                 feedly.markPostsRead(temp);
+                                 clear_updateline();
+                                 item_opts_off(curItem, O_SELECTABLE);
+
+                                 break;
+                                 }
                         case 'a':{
                                          char feed[200];
                                          char title[200];
@@ -332,32 +362,42 @@ void CursesProvider::ctgMenuCallback(char* label){
         lastEntryRead = item_description(items[0]);
         currentCategoryRead = false;
 }
-void CursesProvider::postsMenuCallback(ITEM* item){
+void CursesProvider::postsMenuCallback(ITEM* item, bool preview){
         item_opts_off(item, O_SELECTABLE);
 
         PostData* container = feedly.getSinglePostData(item_index(item));
 
-        std::ofstream myfile ("example.html");
+        if(preview){
 
-        if (myfile.is_open())
-                myfile << container->content;
+                std::ofstream myfile ("preview.html");
 
-        myfile.close();
+                if (myfile.is_open())
+                        myfile << container->content;
 
-        def_prog_mode();
-        endwin();
+                myfile.close();
 
-        std::system("w3m example.html");
+                def_prog_mode();
+                endwin();
+
+                system("w3m preview.html");
+                reset_prog_mode();
+        }
+        else{
+                system(std::string("w3m \'" + container->originURL + "\'").c_str());
+        }
+
+        mvprintw(LINES-2, 0, "Marking post read...");
+        refresh();
 
         std::vector<std::string> *temp = new std::vector<std::string>;
         temp->push_back(container->id);
 
         feedly.markPostsRead(const_cast<std::vector<std::string>*>(temp));
-
-        reset_prog_mode();
+        clear_updateline();
 
         update_panels();
         lastEntryRead = item_description(item);
+        system("rm preview.html");
 }
 void CursesProvider::win_show(WINDOW *win, char *label, int label_color, bool highlight){
         int startx, starty, height, width;
