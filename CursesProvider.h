@@ -15,12 +15,12 @@ class CursesProvider{
                 void control();
         private:
                 FeedlyProvider feedly;
-                const std::map<std::string, std::string> *labels;
                 WINDOW *ctgWin, *postsWin;
                 PANEL  *panels[2], *top;
                 ITEM **ctgItems, **postsItems;
                 MENU *ctgMenu, *postsMenu;
                 std::string lastEntryRead;
+                int totalPosts = 0, numRead = 0, numUnread = 0;
                 bool currentCategoryRead;
                 void createCategoriesMenu(); 
                 void createPostsMenu(); 
@@ -30,6 +30,7 @@ class CursesProvider{
                 void print_in_middle(WINDOW *win, int starty, int startx, int width, char *string, chtype color);
                 void print_in_center(WINDOW *win, int starty, int startx, int height, int width, char *string, chtype color);
                 void clear_updateline();
+                void update_counter();
                 void cleanup();
 };
 
