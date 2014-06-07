@@ -12,6 +12,7 @@
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
+#include <jsoncpp/json/json.h>
 
 #include "CursesProvider.h"
 
@@ -36,11 +37,20 @@ CursesProvider::CursesProvider(bool verbose){
         feedly.setVerbose(false);
 }
 void CursesProvider::init(){
-        init_pair(1, COLOR_RED, 0);
-        init_pair(2, COLOR_GREEN, COLOR_BLACK);
-        init_pair(3, COLOR_BLUE, COLOR_BLACK);
-        init_pair(4, COLOR_CYAN, COLOR_BLACK);
-        init_pair(5, COLOR_WHITE, COLOR_BLACK);
+        Json::Value root;
+        Json::Reader reader;
+
+        std::ifstream tokenFile(std::string(std::string(HOME_PATH) + "/.config/feednix/config.json").c_str(), std::ifstream::binary);
+        if(reader.parse(tokenFile, root)){
+                init_pair(1, root["colors"]["active_panel"].asInt(), root["colors"]["background"].asInt());
+                init_pair(2, root["colors"]["idle_panel"].asInt(), root["colors"]["background"].asInt());
+                init_pair(3, root["colors"]["counter"].asInt(), root["colors"]["background"].asInt());
+                init_pair(4, root["colors"]["status_line"].asInt(), root["colors"]["background"].asInt());
+                init_pair(5, root["colors"]["instructions_line"].asInt(), root["colors"]["background"].asInt());
+                init_pair(6, root["colors"]["item_text"].asInt(), root["colors"]["background"].asInt());
+                init_pair(7, root["colors"]["item_highlight"].asInt(), root["colors"]["background"].asInt());
+                init_pair(8, root["colors"]["read_item"].asInt(), root["colors"]["background"].asInt());
+        }
 
         createCategoriesMenu();
         createPostsMenu();
@@ -77,13 +87,15 @@ void CursesProvider::control(){
                                         top = (PANEL *)panel_userptr(top);
                                         top_panel(top);
 
+                                        attron(COLOR_PAIR(4));
                                         mvprintw(LINES-2, 0, "Updating stream...");
+                                        attroff(COLOR_PAIR(4));
                                         refresh();
                                         ctgMenuCallback(strdup(item_name(current_item(curMenu))));
                                         clear_updateline();
 
                                         win_show(postsWin, strdup("Posts"), 1, true);
-                                        win_show(ctgWin, strdup("Categories"), 1, false);
+                                        win_show(ctgWin, strdup("Categories"), 2, false);
                                         if(currentCategoryRead)
                                                 curMenu = ctgMenu;
                                         else
@@ -102,26 +114,26 @@ void CursesProvider::control(){
                                 if(curMenu == ctgMenu){
                                         curMenu = postsMenu;
                                         win_show(postsWin, strdup("Posts"), 1, true);
-                                        win_show(ctgWin, strdup("Categories"), 1, false);
+                                        win_show(ctgWin, strdup("Categories"), 2, false);
 
                                         move(LINES-1, 0);
                                         clrtoeol();
-                                        attron(COLOR_PAIR(4));
+                                        attron(COLOR_PAIR(5));
                                         mvprintw(LINES - 1, 0, "Enter: See Preview  A: mark all read  u: mark unread  r: mark read  R: refresh  o: Open in plain-text  O: Open in Browser  F1: exit");
-                                        attroff(COLOR_PAIR(4));
+                                        attroff(COLOR_PAIR(5));
                                         refresh();
                                 }
                                 else{
                                         curMenu = ctgMenu;
                                         win_show(ctgWin, strdup("Categories"), 1, true);
-                                        win_show(postsWin, strdup("Posts"), 1, false);
+                                        win_show(postsWin, strdup("Posts"), 2, false);
 
                                         move(LINES-1, 0);
                                         clrtoeol();
 
-                                        attron(COLOR_PAIR(4));
+                                        attron(COLOR_PAIR(5));
                                         mvprintw(LINES - 1, 0, "Enter: Fetch Stream  A: mark all read  R: refresh  F1: exit");
-                                        attroff(COLOR_PAIR(4));
+                                        attroff(COLOR_PAIR(5));
 
                                         refresh();
                                 }
@@ -161,7 +173,9 @@ void CursesProvider::control(){
                                          std::vector<std::string> *temp = new std::vector<std::string>;
                                          temp->push_back(item_description(curItem));
 
+                                         attron(COLOR_PAIR(4));
                                          mvprintw(LINES-2, 0, "Marking post read...");
+                                         attroff(COLOR_PAIR(4));
                                          refresh();
 
                                          feedly.markPostsRead(temp);
@@ -174,7 +188,9 @@ void CursesProvider::control(){
                                          break;
                                  }
                         case 'R':
+                                 attron(COLOR_PAIR(4));
                                  mvprintw(LINES-2, 0, "Updating stream...");
+                                 attroff(COLOR_PAIR(4));
                                  refresh();
 
                                  ctgMenuCallback(strdup(item_name(current_item(ctgMenu))));
@@ -184,25 +200,27 @@ void CursesProvider::control(){
                                  postsMenuCallback(curItem, false);
                                  break;
                         case 'O':{
-                                 termios oldt;
-                                 tcgetattr(STDIN_FILENO, &oldt);
-                                 termios newt = oldt;
-                                 newt.c_lflag &= ~ECHO;
-                                 tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+                                         termios oldt;
+                                         tcgetattr(STDIN_FILENO, &oldt);
+                                         termios newt = oldt;
+                                         newt.c_lflag &= ~ECHO;
+                                         tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-                                 PostData* data = feedly.getSinglePostData(item_index(curItem));
-                                 std::vector<std::string> *temp = new std::vector<std::string>;
-                                 temp->push_back(data->id);
+                                         PostData* data = feedly.getSinglePostData(item_index(curItem));
+                                         std::vector<std::string> *temp = new std::vector<std::string>;
+                                         temp->push_back(data->id);
 
-                                 system(std::string("xdg-open \"" + data->originURL + "\" > /dev/null").c_str());
-                                 mvprintw(LINES-2, 0, "Marking post read...");
-                                 refresh();
+                                         system(std::string("xdg-open \"" + data->originURL + "\" > /dev/null").c_str());
+                                         attron(COLOR_PAIR(4));
+                                         mvprintw(LINES-2, 0, "Marking post read...");
+                                         attroff(COLOR_PAIR(4));
+                                         refresh();
 
-                                 feedly.markPostsRead(temp);
-                                 clear_updateline();
-                                 item_opts_off(curItem, O_SELECTABLE);
+                                         feedly.markPostsRead(temp);
+                                         clear_updateline();
+                                         item_opts_off(curItem, O_SELECTABLE);
 
-                                 break;
+                                         break;
                                  }
                         case 'a':{
                                          char feed[200];
@@ -210,6 +228,7 @@ void CursesProvider::control(){
                                          char ctg[200];
                                          echo();
 
+                                         attron(COLOR_PAIR(4));
                                          mvprintw(LINES - 2, 0, "[ENTER FEED]:");
                                          mvgetnstr(LINES-2, strlen("[ENTER FEED]") + 1, feed, 200); 
                                          mvaddch(LINES-2, 0, ':');
@@ -235,6 +254,7 @@ void CursesProvider::control(){
                                          clrtoeol();
 
                                          mvprintw(LINES-2, 0, "Adding subscription...");
+                                         attroff(COLOR_PAIR(4));
                                          refresh();
 
                                          if(strlen(feed) != 0)
@@ -244,7 +264,9 @@ void CursesProvider::control(){
                                          break;
                                  }
                         case 'A':{
+                                         attron(COLOR_PAIR(4));
                                          mvprintw(LINES-2, 0, "Marking category read...");
+                                         attroff(COLOR_PAIR(4));
                                          refresh();
 
                                          feedly.markCategoriesRead(item_description(current_item(ctgMenu)), lastEntryRead);
@@ -287,9 +309,13 @@ void CursesProvider::createCategoriesMenu(){
         set_menu_win(ctgMenu, ctgWin);
         set_menu_sub(ctgMenu, derwin(ctgWin, 0, 38, 3, 1));
 
+        set_menu_fore(ctgMenu, COLOR_PAIR(7) | A_REVERSE);
+        set_menu_back(ctgMenu, COLOR_PAIR(6));
+        set_menu_grey(ctgMenu, COLOR_PAIR(8));
+
         set_menu_mark(ctgMenu, "  ");
 
-        win_show(ctgWin, strdup("Categories"),  1, false);
+        win_show(ctgWin, strdup("Categories"),  2, false);
 
         menu_opts_off(ctgMenu, O_SHOWDESC);
         menu_opts_on(postsMenu, O_NONCYCLIC);
@@ -332,9 +358,9 @@ void CursesProvider::createPostsMenu(){
         set_menu_sub(postsMenu, derwin(postsWin, height-4, width-2, 3, 1));
         set_menu_format(postsMenu, height-4, 0);
 
-        set_menu_fore(postsMenu, COLOR_PAIR(1) | A_REVERSE);
-        set_menu_back(postsMenu, COLOR_PAIR(2));
-        set_menu_grey(postsMenu, COLOR_PAIR(3));
+        set_menu_fore(postsMenu, COLOR_PAIR(7) | A_REVERSE);
+        set_menu_back(postsMenu, COLOR_PAIR(6));
+        set_menu_grey(postsMenu, COLOR_PAIR(8));
 
         set_menu_mark(postsMenu, "*");
 
@@ -407,7 +433,9 @@ void CursesProvider::postsMenuCallback(ITEM* item, bool preview){
         }
         if(item_opts(item)){
                 item_opts_off(item, O_SELECTABLE);
+                attron(COLOR_PAIR(4));
                 mvprintw(LINES-2, 0, "Marking post read...");
+                attroff(COLOR_PAIR(4));
                 refresh();
 
                 std::vector<std::string> *temp = new std::vector<std::string>;
@@ -441,13 +469,13 @@ void CursesProvider::win_show(WINDOW *win, char *label, int label_color, bool hi
                 wattroff(win, COLOR_PAIR(label_color));
         }
         else{
-                wattron(win, COLOR_PAIR(5));
+                wattron(win, COLOR_PAIR(2));
                 box(win, 0, 0);
                 mvwaddch(win, 2, 0, ACS_LTEE);
                 mvwhline(win, 2, 1, ACS_HLINE, width - 2);
                 mvwaddch(win, 2, width - 1, ACS_RTEE);
                 print_in_middle(win, 1, 0, width, label, COLOR_PAIR(5));
-                wattroff(win, COLOR_PAIR(5));
+                wattroff(win, COLOR_PAIR(2));
         }
 
 }
@@ -504,7 +532,9 @@ void CursesProvider::update_counter(){
 
         move(LINES - 2, COLS - strlen(counter));
         clrtoeol();
+        attron(COLOR_PAIR(3));
         mvprintw(LINES - 2, COLS - strlen(counter), counter);
+        attroff(COLOR_PAIR(3));
         refresh();
         update_panels();
 }

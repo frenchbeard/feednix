@@ -53,7 +53,7 @@ class FeedlyProvider{
                 CURLcode curl_res;
                 std::string feedly_url;
                 std::string userAuthCode;
-                std::string TOKEN_PATH, TEMP_PATH, COOKIE_PATH;
+                std::string TOKEN_PATH, TEMP_PATH, COOKIE_PATH, rtrv_count;
                 UserData user_data;
                 bool verboseFlag;
                 std::vector<PostData> feeds;

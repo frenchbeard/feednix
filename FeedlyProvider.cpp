@@ -17,6 +17,14 @@ FeedlyProvider::FeedlyProvider(){
         TEMP_PATH = std::string(HOME_PATH) + "/.config/feednix/temp.txt";
         TOKEN_PATH = std::string(HOME_PATH) + "/.config/feednix/tokenFile";
         COOKIE_PATH = std::string(HOME_PATH) + "/.config/feednix/cookie";
+
+        Json::Value root;
+        Json::Reader reader;
+
+        std::ifstream tokenFile(std::string(std::string(HOME_PATH) + "/.config/feednix/config.json").c_str(), std::ifstream::binary);
+        if(reader.parse(tokenFile, root)){
+                rtrv_count = root["posts_retrive_count"].asString();
+        }
 }
 void FeedlyProvider::askForCredentials(){
         std::string email, pswd;
@@ -52,7 +60,7 @@ void FeedlyProvider::authenticateUser(const std::string& email, const std::strin
 
         curl_easy_setopt(curl, CURLOPT_REFERER, std::string(GOOGLE_AUTH_URL).c_str());
         curl_easy_setopt(curl, CURLOPT_POST, 1);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, std::string("signIn=Sign+in&_utf8=&#9731;&bgresponse=js_disabled&GALX=" + user_data.galx + "&pstMsg=&dnCon=&checkConnection=youtube:1141:1&checkedDomains=youtube&Email=jorgemartinezhernandez&Passwd=trueforerunner117").c_str());
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, std::string("signIn=Sign+in&_utf8=&#9731;&bgresponse=js_disabled&GALX=" + user_data.galx + "&pstMsg=&dnCon=&checkConnection=youtube:1141:1&checkedDomains=youtube&Email=" + email + "&Passwd=" + passwd).c_str());
 
         curl_res = curl_easy_perform(curl);
 
@@ -73,9 +81,8 @@ void FeedlyProvider::authenticateUser(const std::string& email, const std::strin
                 user_data.code = tempCode.substr(codeIndex, (tempCode.find("&", codeIndex) - codeIndex));
 
                 if(user_data.code.find("google") != std::string::npos){
-                        std::cout << "\nCould not log you in - Try Again" << std::endl; 
-                        askForCredentials();
-                        return;
+                        std::cout << "\nCould not log you in" << std::endl; 
+                        exit(EXIT_FAILURE);
                 }
                 else
                         parseAuthenticationResponse();
@@ -161,13 +168,13 @@ const std::vector<PostData>* FeedlyProvider::giveStreamPosts(const std::string& 
         feeds.clear(); 
 
         if(category == "All")
-                curl_retrive("streams/contents?ranked=newest&count=" + std::to_string(DEFAULT_FCOUNT) + "&unreadOnly=true&streamId=" + std::string(curl_easy_escape(curl, (user_data.categories["All"]).c_str(), 0)));
+                curl_retrive("streams/contents?ranked=newest&count=" + rtrv_count + "&unreadOnly=true&streamId=" + std::string(curl_easy_escape(curl, (user_data.categories["All"]).c_str(), 0)));
         else if(category == "Uncategorized")
-                curl_retrive("streams/contents?ranked=newest&count=" + std::to_string(DEFAULT_FCOUNT) + "&unreadOnly=true&streamId=" + std::string(curl_easy_escape(curl, (user_data.categories["Uncategorized"]).c_str(), 0)));
+                curl_retrive("streams/contents?ranked=newest&count=" + rtrv_count + "&unreadOnly=true&streamId=" + std::string(curl_easy_escape(curl, (user_data.categories["Uncategorized"]).c_str(), 0)));
         else if(category == "Saved")
-                curl_retrive("streams/contents?ranked=newest&count=" + std::to_string(DEFAULT_FCOUNT) + "&unreadOnly=true&streamId=" + std::string(curl_easy_escape(curl, (user_data.categories["Saved"]).c_str(), 0)));
+                curl_retrive("streams/contents?ranked=newest&count=" + rtrv_count + "&unreadOnly=true&streamId=" + std::string(curl_easy_escape(curl, (user_data.categories["Saved"]).c_str(), 0)));
         else
-                curl_retrive("streams/" + std::string(curl_easy_escape(curl, user_data.categories[category].c_str(), 0)) + "/contents?unreadOnly=true&ranked=newest&count=" + std::to_string(DEFAULT_FCOUNT));
+                curl_retrive("streams/" + std::string(curl_easy_escape(curl, user_data.categories[category].c_str(), 0)) + "/contents?unreadOnly=true&ranked=newest&count=" + rtrv_count);
 
         Json::Reader reader;
         Json::Value root;
@@ -178,7 +185,12 @@ const std::vector<PostData>* FeedlyProvider::giveStreamPosts(const std::string& 
         parsingSuccesful = reader.parse(data, root);
 
         if(data == NULL || curl_res != CURLE_OK || !parsingSuccesful || !root.isMember("items")){ 
-                std::cerr << "ERROR: Failed to Retrive Categories" << std::endl;
+                if(!parsingSuccesful)
+                        std::cerr << "\nERROR: Failed to parse tokens file" << reader.getFormatedErrorMessages() << std::endl;
+                if(curl_res != CURLE_OK)
+                        fprintf(stderr, "curl_easy_perform() failed : %s\n", curl_easy_strerror(curl_res));
+
+                exit(EXIT_FAILURE);
                 return NULL;
         }
 
