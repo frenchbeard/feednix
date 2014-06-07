@@ -196,14 +196,14 @@ const std::vector<PostData>* FeedlyProvider::giveStreamPosts(const std::string& 
                 return NULL;
         }
 
-        if(root["items"].size() == 0)
+        if(root["items"].size() == 0){
                 return NULL;
+        }
 
         for(int i = 0; i < root["items"].size(); i++)
                 feeds.push_back(PostData{root["items"][i]["summary"]["content"].asString(), root["items"][i]["title"].asString(), root["items"][i]["id"].asString(), root["items"][i]["originId"].asString()});
 
         data.close();
-
         return &(feeds);
 
 }
@@ -333,7 +333,7 @@ bool FeedlyProvider::markCategoriesRead(const std::string& id, const std::string
 
         fclose(data_holder);
         if(curl_res != CURLE_OK){
-                std::cerr << "Could not mark post(s) as read" << std::endl;
+                std::cerr << "Could not mark category(ies) as read" << std::endl;
                 return false;
         }
 
@@ -382,7 +382,7 @@ bool FeedlyProvider::addSubscription(bool newCategory, const std::string& feed, 
 
         fclose(data_holder);
         if(curl_res != CURLE_OK){
-                std::cerr << "Could not mark post(s) as read" << std::endl;
+                std::cerr << "Could not add subscription" << std::endl;
                 return false;
         }
 
@@ -485,10 +485,4 @@ void FeedlyProvider::echo(bool on = true){
 }
 void FeedlyProvider::curl_cleanup(){
         curl_global_cleanup();
-
-        user_data.categories.clear();
-        feeds.clear();
-        user_data.code = "";
-        user_data.authToken = "";
-        user_data.galx = "";
 }

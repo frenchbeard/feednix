@@ -83,19 +83,19 @@ void CursesProvider::control(){
 
                 switch(ch){
                         case 10:
-                                if(curMenu == ctgMenu){
-                                        top = (PANEL *)panel_userptr(top);
-                                        top_panel(top);
+                                if(curMenu == ctgMenu){ top = (PANEL *)panel_userptr(top);
 
                                         attron(COLOR_PAIR(4));
                                         mvprintw(LINES-2, 0, "Updating stream...");
                                         attroff(COLOR_PAIR(4));
                                         refresh();
+                                        update_panels();
+
                                         ctgMenuCallback(strdup(item_name(current_item(curMenu))));
                                         clear_updateline();
 
-                                        win_show(postsWin, strdup("Posts"), 1, true);
-                                        win_show(ctgWin, strdup("Categories"), 2, false);
+                                        top_panel(top);
+
                                         if(currentCategoryRead)
                                                 curMenu = ctgMenu;
                                         else
@@ -113,6 +113,7 @@ void CursesProvider::control(){
                         case 9:
                                 if(curMenu == ctgMenu){
                                         curMenu = postsMenu;
+
                                         win_show(postsWin, strdup("Posts"), 1, true);
                                         win_show(ctgWin, strdup("Categories"), 2, false);
 
@@ -378,20 +379,28 @@ void CursesProvider::ctgMenuCallback(char* label){
 
         int n_choices, i = 0;
         const std::vector<PostData>* posts = feedly.giveStreamPosts(label);
-        totalPosts = posts->size();
-        numRead = 0;
-        numUnread = totalPosts;
 
         if(posts == NULL){
+                totalPosts = 0;
+                numRead = 0;
+                numUnread = 0;
+
                 unpost_menu(postsMenu);
                 set_menu_items(postsMenu, NULL);
                 post_menu(postsMenu);
 
-                print_in_center(postsWin, 3, 1, height, width-4, strdup("All Posts Read"), 1);  
+                print_in_center(postsWin, 3, 1, height, width-4, strdup("All Posts Read"), 1);
+                win_show(postsWin, strdup("Posts"), 2, false);
+                win_show(ctgWin, strdup("Categories"), 1, true);
+
                 currentCategoryRead = true;
                 return;
         }
 
+        totalPosts = posts->size();
+        numRead = 0;
+        numUnread = totalPosts;
+        
         n_choices = posts->size() + 1;
         ITEM** items = (ITEM **)calloc(sizeof(std::vector<PostData>::value_type)*n_choices, sizeof(ITEM *));
 
@@ -409,6 +418,9 @@ void CursesProvider::ctgMenuCallback(char* label){
         set_menu_format(postsMenu, height, 0);
         lastEntryRead = item_description(items[0]);
         currentCategoryRead = false;
+
+        win_show(postsWin, strdup("Posts"), 1, true);
+        win_show(ctgWin, strdup("Categories"), 2, false);
 }
 void CursesProvider::postsMenuCallback(ITEM* item, bool preview){
         PostData* container = feedly.getSinglePostData(item_index(item));
@@ -424,12 +436,14 @@ void CursesProvider::postsMenuCallback(ITEM* item, bool preview){
 
                 def_prog_mode();
                 endwin();
-
                 system(std::string("w3m " + PREVIEW_PATH).c_str());
                 reset_prog_mode();
         }
         else{
+                def_prog_mode();
+                endwin();
                 system(std::string("w3m \'" + container->originURL + "\'").c_str());
+                reset_prog_mode();
         }
         if(item_opts(item)){
                 item_opts_off(item, O_SELECTABLE);
