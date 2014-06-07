@@ -28,14 +28,16 @@ FeedlyProvider::FeedlyProvider(){
 }
 void FeedlyProvider::askForCredentials(){
         std::string email, pswd;
-        std::cout << "Enter email: ";
+        std::cout << ">> Enter email: ";
         std::cin >> email;
 
-        std::cout << "Enter password: ";
+        std::cout << ">> Enter password: ";
 
         echo(false);
         std::cin >> pswd;
         echo(true);
+
+        std::cout << "\n >> Login you in...." << std::endl;
 
         authenticateUser(email, pswd);
 }
@@ -81,7 +83,7 @@ void FeedlyProvider::authenticateUser(const std::string& email, const std::strin
                 user_data.code = tempCode.substr(codeIndex, (tempCode.find("&", codeIndex) - codeIndex));
 
                 if(user_data.code.find("google") != std::string::npos){
-                        std::cout << "\nCould not log you in" << std::endl; 
+                        std::cout << "\nCould not log you in\nIncorrect email or password perhaps?" << std::endl; 
                         exit(EXIT_FAILURE);
                 }
                 else
