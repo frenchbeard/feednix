@@ -1,5 +1,5 @@
 CC = g++
-INSTDIR = /usr/local/bin
+INSTDIR = /usr/bin
 CFLAGS = -std=c++11 -O -c -Wall
 LIBS = -ljsoncpp -lcurl -lncurses -lpanel -lmenu
 
@@ -19,13 +19,3 @@ clean :
 	-rm -f $(OBJECTS) $(EXECUTABLE)
 
 .PHONY: all clean
-
-install: $(EXECUTABLE)
-	@ if [ -d $(INSTDIR)  ]; then \
-		cp $(EXECUTABLE) $(INSTDIR); \
-		chmod a+x $(INSTDIR)/$(EXECUTABLE); \
-		chmod og-w $(INSTDIR)/$(EXECUTABLE); \
-		echo "$(EXECUTABLE) is installed in $(INSTDIR)"; \
-	else \
-		echo "Warning! $(INSTDIR) does not exist"; \
-	fi 
