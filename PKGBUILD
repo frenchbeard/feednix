@@ -11,7 +11,7 @@ arch=('any')
 url="http://feednix-jarkore.rhcloud.com/"
 license=('GPL3')
 depends=('ncurses' 'curl' 'jsoncpp')
-makedepends=('git' 'g++')
+makedepends=('git' 'gcc')
 md5sums=('SKIP')
 
 source=('Feednix::git+http://github.com/Jarkore/Feednix')

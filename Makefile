@@ -19,3 +19,13 @@ clean :
 	-rm -f $(OBJECTS) $(EXECUTABLE)
 
 .PHONY: all clean
+
++install: $(EXECUTABLE)
+	@ if [ -d $(INSTDIR)   ]; then \
+		cp $(EXECUTABLE) $(INSTDIR); \
+		chmod a+x $(INSTDIR)/$(EXECUTABLE); \
+		chmod og-w $(INSTDIR)/$(EXECUTABLE); \
+		echo "$(EXECUTABLE) is installed in $(INSTDIR)"; \
+	else \
+		echo "Warning! $(INSTDIR) does not exist"; \
+	fi 
