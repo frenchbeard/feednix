@@ -1,0 +1,27 @@
+{
+        "colors" : { 
+
+                /* ====== Color Definitions =======
+                 *  BLACK   0
+                 *  RED     1
+                 *  GREEN   2
+                 *  YELLOW  3
+                 *  BLUE    4
+                 *  MAGENTA 5
+                 *  CYAN    6
+                 *  WHITE   7
+                 * ================================ */
+
+                "background" : 0,
+                "active_panel" : 1,
+                "idle_panel" : 6,
+                "counter" : 5,
+                "status_line" : 7,
+                "instructions_line" : 4,
+                "item_text" : 7,
+                "item_highlight" : 2,
+                "read_item" : 3
+        },
+          // Count of posts to be retrived per request. Maximum is 10000
+        "posts_retrive_count" : "500"
+}

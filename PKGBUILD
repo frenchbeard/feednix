@@ -31,5 +31,7 @@ package(){
         cd "${srcdir}/Feednix"
         install -D -m755 feednix ${pkgdir}/usr/bin/feednix || return 1
         install -D -m644 LICENSE ${pkgdir}/usr/share/licenses/feednix/LICENSE
+        install -D -m755 config.json ${pkgdir}/etc/feednix/config.json
+        cp --parents config.json $HOME/.config/feednix/config.json
         make clean
 }
