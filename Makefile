@@ -20,7 +20,7 @@ clean :
 
 .PHONY: all clean
 
-+install: $(EXECUTABLE)
+install: $(EXECUTABLE)
 	@ if [ -d $(INSTDIR)   ]; then \
 		cp $(EXECUTABLE) $(INSTDIR); \
 		chmod a+x $(INSTDIR)/$(EXECUTABLE); \
