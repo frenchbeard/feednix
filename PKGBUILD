@@ -2,7 +2,7 @@
 # Contributor: Jorge Martinez Hernandez <jorgemartinezhernandez@gmail.com>
 
 pkgname=feednix
-pkgver=v0.6.3.0.r905d648
+pkgver=v0.6.3.2.r885cb8b
 pkgrel=1
 pkgdesc="A simple ncurses-based console client for Feedly"
 
@@ -32,6 +32,7 @@ package(){
         install -D -m755 feednix ${pkgdir}/usr/bin/feednix || return 1
         install -D -m644 LICENSE ${pkgdir}/usr/share/licenses/feednix/LICENSE
         install -D -m755 config.json ${pkgdir}/etc/feednix/config.json
-        cp --parents config.json $HOME/.config/feednix/config.json
+        mkdir -p $HOME/.config/feednix
+        cp config.json ~/.config/feednix/config.json
         make clean
 }
