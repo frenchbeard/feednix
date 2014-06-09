@@ -2,7 +2,7 @@
 # Contributor: Jorge Martinez Hernandez <jorgemartinezhernandez@gmail.com>
 
 pkgname=feednix
-pkgver=0.6
+pkgver=v0.6.3.0.r905d648
 pkgrel=1
 pkgdesc="A simple ncurses-based console client for Feedly"
 
@@ -17,8 +17,8 @@ md5sums=('SKIP')
 source=('Feednix::git+http://github.com/Jarkore/Feednix')
 
 pkgver() {
-          cd "$srcdir/$pkgname"
-            git describe --long | sed -r 's/([^-]*g)/r\l/;s/-/./g'
+          cd "$srcdir/Feednix"
+          git describe --long | sed -r 's/([^-]*g)/r\l/;s/-/./g'
 
 }
 
@@ -29,6 +29,7 @@ build(){
 
 package(){
         cd "${srcdir}/Feednix"
-        make install
+        install -D -m755 feednix ${pkgdir}/usr/bin/feednix || return 1
+        install -D -m644 LICENSE ${pkgdir}/usr/share/licenses/feednix/LICENSE
         make clean
 }
