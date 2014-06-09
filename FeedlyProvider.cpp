@@ -161,7 +161,7 @@ const std::map<std::string, std::string>* FeedlyProvider::getLabels(){
         user_data.categories["Saved"] = "user/" + user_data.id + "/tag/global.saved"; 
         user_data.categories["Uncategorized"] = "user/" + user_data.id + "/category/global.uncategorized"; 
 
-        for(int i = 0; i < root.size(); i++)
+        for(unsigned int i = 0; i < root.size(); i++)
                 user_data.categories[(root[i]["label"]).asString()] = root[i]["id"].asString();
 
         return &(user_data.categories);
@@ -200,7 +200,7 @@ const std::vector<PostData>* FeedlyProvider::giveStreamPosts(const std::string& 
                 return NULL;
         }
 
-        for(int i = 0; i < root["items"].size(); i++)
+        for(unsigned int i = 0; i < root["items"].size(); i++)
                 feeds.push_back(PostData{root["items"][i]["summary"]["content"].asString(), root["items"][i]["title"].asString(), root["items"][i]["id"].asString(), root["items"][i]["originId"].asString()});
 
         data.close();
@@ -209,7 +209,6 @@ const std::vector<PostData>* FeedlyProvider::giveStreamPosts(const std::string& 
 }
 bool FeedlyProvider::markPostsRead(const std::vector<std::string>* ids){
         FILE* data_holder = fopen(TEMP_PATH.c_str(), "wb");
-        int i = 0;
 
         Json::Value jsonCont;
         Json::Value array;
@@ -253,7 +252,6 @@ bool FeedlyProvider::markPostsRead(const std::vector<std::string>* ids){
 }
 bool FeedlyProvider::markPostsUnread(const std::vector<std::string>* ids){
         FILE* data_holder = fopen(TEMP_PATH.c_str(), "wb");
-        int i = 0;
 
         Json::Value jsonCont;
         Json::Value array;
@@ -297,7 +295,6 @@ bool FeedlyProvider::markPostsUnread(const std::vector<std::string>* ids){
 }
 bool FeedlyProvider::markCategoriesRead(const std::string& id, const std::string& lastReadEntryId){
         FILE* data_holder = fopen(TEMP_PATH.c_str(), "wb");
-        int i = 0;
 
         Json::Value jsonCont;
         Json::Value array;

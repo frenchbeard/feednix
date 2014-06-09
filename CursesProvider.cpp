@@ -285,7 +285,7 @@ void CursesProvider::control(){
         cleanup();
 }
 void CursesProvider::createCategoriesMenu(){
-        int n_choices, c, i = 3;
+        int n_choices, i = 3;
         const std::map<std::string, std::string> *labels = feedly.getLabels();
 
         n_choices = labels->size() + 1;
@@ -326,7 +326,7 @@ void CursesProvider::createCategoriesMenu(){
 void CursesProvider::createPostsMenu(){
         int height, width;
 
-        int n_choices, c, i = 0;
+        int n_choices, i = 0;
 
         const std::vector<PostData> *posts = feedly.giveStreamPosts("All");
         totalPosts = posts->size();
@@ -555,12 +555,12 @@ void CursesProvider::update_counter(){
 void CursesProvider::cleanup(){
         unpost_menu(ctgMenu);
         free_menu(ctgMenu);
-        for(int i = 0; i < ARRAY_SIZE(ctgItems); ++i)
+        for(unsigned int i = 0; i < ARRAY_SIZE(ctgItems); ++i)
                 free_item(ctgItems[i]);
 
         unpost_menu(postsMenu);
         free_menu(postsMenu);
-        for(int i = 0; i < ARRAY_SIZE(postsItems); ++i)
+        for(unsigned int i = 0; i < ARRAY_SIZE(postsItems); ++i)
                 free_item(postsItems[i]);
 
         endwin();
