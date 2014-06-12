@@ -69,12 +69,6 @@ void FeedlyProvider::authenticateUser(const std::string& email, const std::strin
         char *currentURL;
         user_data.code = "";
 
-        if(curl_res != CURLE_OK){
-                std::cerr << "\nERROR: Could not authenticate user" << std::endl;
-                fprintf(stderr, "curl_easy_perform() failed : %s\n", curl_easy_strerror(curl_res));
-                exit(EXIT_FAILURE);
-        }
-
         curl_res = curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &currentURL);
         std::string tempCode(currentURL);
 

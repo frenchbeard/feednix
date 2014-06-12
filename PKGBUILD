@@ -10,7 +10,7 @@ pkgdesc="A simple ncurses-based console client for Feedly"
 arch=('any')
 url="http://feednix-jarkore.rhcloud.com/"
 license=('GPL3')
-depends=('ncurses' 'curl' 'jsoncpp')
+depends=('ncurses' 'curl' 'jsoncpp' 'w3m')
 makedepends=('git' 'gcc')
 md5sums=('SKIP')
 
