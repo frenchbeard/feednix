@@ -11,28 +11,25 @@ arch=('any')
 url="http://feednix-jarkore.rhcloud.com/"
 license=('GPL3')
 depends=('ncurses' 'curl' 'jsoncpp' 'w3m')
-makedepends=('git' 'gcc')
+makedepends=('git')
 md5sums=('SKIP')
 
 source=('Feednix::git+http://github.com/Jarkore/Feednix')
 
 pkgver() {
-          cd "$srcdir/Feednix"
-          git describe --long | sed -r 's/([^-]*g)/r\l/;s/-/./g'
-
+        cd "$srcdir/Feednix"
+        git describe --long | sed -r 's/([^-]*g)/r\l/;s/-/./g'
 }
 
 build(){
         cd Feednix
         make
-        make install
 }
 
 package(){
         cd "${srcdir}/Feednix"
-        install -D -m755 config.json ${pkgdir}/etc/feednix/config.json
-        install -D -m755 feednix ${pkgdir}/usr/bin/feednix || return 1
-        install -D -m644 LICENSE ${pkgdir}/usr/share/licenses/feednix/LICENSE
-
-        make clean
+        make install
+        install -D -m755 config.json "${pkgdir}/etc/feednix/config.json"
+        install -D -m755 feednix "${pkgdir}/usr/bin/feednix"
+        install -D -m644 LICENSE "${pkgdir}/usr/share/licenses/feednix/LICENSE"
 }
