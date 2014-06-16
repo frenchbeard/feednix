@@ -27,6 +27,11 @@ int main(int argc, char **argv){
 
         bool verboseEnabled = false;
         CursesProvider *curses;
+ 
+        if(fopen(std::string(std::string(HOME_PATH) + "/filename.txt").c_str(), "r") == NULL){
+                system(std::string("cp /etc/feednix/config.json " + std::string(HOME_PATH) + "/.config/feednix/config.json").c_str());
+        }
+ 
         if(argc >= 2){
                 for(int i = 1; i < argc; ++i){
                         if(argv[i][0] == '-' && argv[i][1] == 'v' && strlen(argv[1]) <= 2)
@@ -55,6 +60,7 @@ int main(int argc, char **argv){
         else{
                 curses = new CursesProvider(false);
         }
+
 
         curses->init();
         curses->control();
