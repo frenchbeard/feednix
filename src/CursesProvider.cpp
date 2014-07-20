@@ -21,9 +21,10 @@
 
 #define HOME_PATH getenv("HOME")
 
-CursesProvider::CursesProvider(bool verbose){
+CursesProvider::CursesProvider(bool verbose, bool change){
         feedly.setVerbose(verbose);
-        feedly.askForCredentials();
+        feedly.setChangeTokensFlag(change);
+        feedly.authenticateUser();
 
         initscr();
         start_color();
@@ -51,9 +52,17 @@ void CursesProvider::init(){
                 init_pair(7, root["colors"]["item_highlight"].asInt(), root["colors"]["background"].asInt());
                 init_pair(8, root["colors"]["read_item"].asInt(), root["colors"]["background"].asInt());
         }
+        else{
+                endwin();
+                feedly.curl_cleanup();
+                std::cerr << "ERROR: Couldn't not read config file" << std::endl;
+                exit(EXIT_FAILURE);
+        }
+
 
         createCategoriesMenu();
         createPostsMenu();
+
 
         panels[0] = new_panel(ctgWin);
         panels[1] = new_panel(postsWin);
@@ -400,7 +409,7 @@ void CursesProvider::ctgMenuCallback(char* label){
         totalPosts = posts->size();
         numRead = 0;
         numUnread = totalPosts;
-        
+
         n_choices = posts->size() + 1;
         ITEM** items = (ITEM **)calloc(sizeof(std::vector<PostData>::value_type)*n_choices, sizeof(ITEM *));
 

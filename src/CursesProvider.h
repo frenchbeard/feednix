@@ -10,7 +10,7 @@
 
 class CursesProvider{
         public:
-                CursesProvider(bool verbose);
+                CursesProvider(bool verbose, bool change);
                 void init();
                 void control();
         private:

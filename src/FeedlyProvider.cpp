@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <jsoncpp/json/json.h>
+#include <jsoncpp/json/writer.h>
 #include <iterator>
 #include <istream>
 #include <termios.h>
@@ -15,8 +16,6 @@ FeedlyProvider::FeedlyProvider(){
         verboseFlag = false;
 
         TEMP_PATH = std::string(HOME_PATH) + "/.config/feednix/temp.txt";
-        TOKEN_PATH = std::string(HOME_PATH) + "/.config/feednix/tokenFile";
-        COOKIE_PATH = std::string(HOME_PATH) + "/.config/feednix/cookie";
 
         Json::Value root;
         Json::Reader reader;
@@ -26,116 +25,51 @@ FeedlyProvider::FeedlyProvider(){
                 rtrv_count = root["posts_retrive_count"].asString();
         }
 }
-void FeedlyProvider::askForCredentials(){
-        std::string email, pswd;
-        std::cout << ">> Enter email: ";
-        std::cin >> email;
-
-        std::cout << ">> Enter password: ";
-
-        echo(false);
-        std::cin >> pswd;
-        echo(true);
-
-        std::cout << "\n >> Login you in...." << std::endl;
-
-        authenticateUser(email, pswd);
-}
-void FeedlyProvider::authenticateUser(const std::string& email, const std::string& passwd){
-        getCookies();
-
-        FILE* data_holder = fopen(TEMP_PATH.c_str(), "wb");
-
-        curl = curl_easy_init();
-
-        curl_easy_setopt(curl, CURLOPT_URL, std::string(GOOGLE_AUTH_URL).c_str()); 
-        curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/4.0");
-        curl_easy_setopt(curl, CURLOPT_AUTOREFERER, 1 );
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
-        curl_easy_setopt(curl, CURLOPT_COOKIEFILE, COOKIE_PATH.c_str());
-        curl_easy_setopt(curl, CURLOPT_COOKIEJAR, COOKIE_PATH.c_str());
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, data_holder);
-
-        enableVerbose();
-
-        curl_res = curl_easy_perform(curl);
-
-        curl_easy_setopt(curl, CURLOPT_REFERER, std::string(GOOGLE_AUTH_URL).c_str());
-        curl_easy_setopt(curl, CURLOPT_POST, 1);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, std::string("signIn=Sign+in&_utf8=&#9731;&bgresponse=js_disabled&GALX=" + user_data.galx + "&pstMsg=&dnCon=&checkConnection=youtube:1141:1&checkedDomains=youtube&Email=" + email + "&Passwd=" + passwd).c_str());
-
-        curl_res = curl_easy_perform(curl);
-
-        char *currentURL;
-        user_data.code = "";
-
-        curl_res = curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &currentURL);
-        std::string tempCode(currentURL);
-
-        if((curl_res == CURLE_OK) && currentURL){
-                std::size_t codeIndex = tempCode.find("code=") + 5;
-                user_data.code = tempCode.substr(codeIndex, (tempCode.find("&", codeIndex) - codeIndex));
-
-                if(user_data.code.find("google") != std::string::npos){
-                        std::cout << "\nCould not log you in\nIncorrect email or password perhaps?" << std::endl; 
-                        exit(EXIT_FAILURE);
-                }
-                else
-                        parseAuthenticationResponse();
-        }
-
-        fclose(data_holder);
-        system(std::string("rm " + TEMP_PATH + " 2> /dev/null").c_str());
-}
-void FeedlyProvider::parseAuthenticationResponse(){
-        struct curl_httppost *formpost = NULL;
-        FILE *tokenJSON = fopen(TOKEN_PATH.c_str(), "wb");
-        system(std::string("chmod 600 " + TOKEN_PATH).c_str());
-
-        feedly_url = FEEDLY_URI + std::string("auth/token?code=") + user_data.code +  CLIENT_ID +  CLIENT_SECRET +  REDIRECT_URI + SCOPE + "&grant_type=authorization_code";
-
-        curl_easy_setopt(curl, CURLOPT_URL, feedly_url.c_str());
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, true);
-        curl_easy_setopt(curl, CURLOPT_AUTOREFERER, true);
-        curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, tokenJSON);
-
-        enableVerbose();
-
-        curl_res = curl_easy_perform(curl);
-
-        bool parsingSuccesful;
-        fclose(tokenJSON);
-
+void FeedlyProvider::authenticateUser(){
         Json::Value root;
         Json::Reader reader;
 
-        std::ifstream tokenFile(TOKEN_PATH.c_str(), std::ifstream::binary);
-        parsingSuccesful = reader.parse(tokenFile, root);
+        std::string configPath = std::string(std::string(HOME_PATH) + "/.config/feednix/config.json");
 
-        if(!parsingSuccesful || curl_res != CURLE_OK || !root.isMember("access_token")){
-                if(!parsingSuccesful)
-                        std::cerr << "\nERROR: Failed to parse tokens file" << reader.getFormatedErrorMessages() << std::endl;
-                if(curl_res != CURLE_OK)
-                        fprintf(stderr, "curl_easy_perform() failed : %s\n", curl_easy_strerror(curl_res));
-                if(!root.isMember("access_token"))
-                        std::cerr << "ERROR: Failed to attain access token" << std::endl;
+        std::ifstream initialConfig(configPath.c_str(), std::ifstream::binary);
+        bool parsingSuccesful = reader.parse(initialConfig, root);
 
-                        exit(EXIT_FAILURE);
-        }
-        if(tokenJSON != NULL && curl_res == CURLE_OK){
-
-                if(parsingSuccesful){
-                        user_data.authToken = (root["access_token"]).asString();
-                        user_data.refreshToken = (root["refresh_token"]).asString();
-                        user_data.id = (root["id"]).asString();
-                }
+        if(!parsingSuccesful){
+                std::cerr << "ERROR: Unable to read from config file" << std::endl;
+                exit(EXIT_FAILURE);
         }
 
-        system(std::string("rm " + std::string(TOKEN_PATH) + " 2> /dev/null").c_str());
-        curl_easy_cleanup(curl);
+        if(root["developer_token"] == Json::nullValue || changeTokens){
+                std::cout << "You will now be redirected to Feedly's Developer Log In page..." << std::endl;
+                std::cout << "Please sign in, copy your user id and retrive the token from your email and copy it onto here.\n" << std::endl;
 
-} 
+                system(std::string("xdg-open \"https://feedly.com/v3/auth/dev\" &> /dev/null &").c_str());
+
+                sleep(3);
+
+                std::string devToken, userID;
+
+                std::cout << "[Enter User ID] >> ";
+                std::cin >> userID;
+
+                std::cout << "[Enter token] >> ";
+                std::cin >> devToken;
+
+                root["developer_token"] = devToken;
+                root["userID"] = userID;
+        }
+        initialConfig.close();
+
+        user_data.authToken = (root["developer_token"]).asString();
+        user_data.id = (root["userID"]).asString(); 
+
+        Json::StyledWriter writer;
+
+        std::ofstream newConfig(configPath.c_str());
+        newConfig << root;
+
+        newConfig.close();
+}
 const std::map<std::string, std::string>* FeedlyProvider::getLabels(){
         curl_retrive("categories");
 
@@ -147,8 +81,9 @@ const std::map<std::string, std::string>* FeedlyProvider::getLabels(){
         std::ifstream data(TEMP_PATH.c_str(), std::ifstream::binary);
         parsingSuccesful = reader.parse(data, root);
 
-        if(data == NULL || curl_res != CURLE_OK || !parsingSuccesful || !root.isValidIndex(0)){
+        if(data == NULL || curl_res != CURLE_OK || !parsingSuccesful){
                 std::cerr << "ERROR: Failed to Retrive Categories" << std::endl;
+                exit(EXIT_FAILURE);
                 return NULL;
         }
         user_data.categories["All"] = "user/" + user_data.id + "/category/global.all"; 
@@ -388,37 +323,6 @@ const std::string FeedlyProvider::getUserId(){
         return user_data.id; 
 }
 
-void FeedlyProvider::getCookies(){
-        FILE* data_holder = fopen(TEMP_PATH.c_str(), "wb");
-
-        curl = curl_easy_init();
-
-        curl_easy_setopt(curl, CURLOPT_URL, std::string(GOOGLE_AUTH_URL).c_str()); 
-        curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/4.0");
-        curl_easy_setopt(curl, CURLOPT_AUTOREFERER, 1 );
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
-        curl_easy_setopt(curl, CURLOPT_COOKIEFILE, COOKIE_PATH.c_str());
-        curl_easy_setopt(curl, CURLOPT_COOKIEJAR, COOKIE_PATH.c_str());
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, data_holder);
-
-        enableVerbose();
-
-        curl_res = curl_easy_perform(curl);
-        curl_easy_cleanup(curl);
-
-        curl = curl_easy_init();
-
-        extract_galx_value();
-        curl_easy_setopt(curl, CURLOPT_REFERER, std::string(GOOGLE_AUTH_URL).c_str());
-        curl_easy_setopt(curl, CURLOPT_POST, 1);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, std::string("signIn=Sign+in&_utf8=&#9731;&bgresponse=js_disabled&GALX=" + user_data.galx + "&pstMsg=&dnCon=&checkConnection=youtube:1141:1&checkedDomains=youtube&Email=jorgemartinezhernandez&Passwd=trueforerunner117").c_str());
-
-        curl_res = curl_easy_perform(curl);
-
-        curl_easy_cleanup(curl);
-        fclose(data_holder);
-
-}
 void FeedlyProvider::enableVerbose(){
         if(verboseFlag)
                 curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
@@ -426,25 +330,8 @@ void FeedlyProvider::enableVerbose(){
 void FeedlyProvider::setVerbose(bool value){
         verboseFlag = value;
 }
-void FeedlyProvider::extract_galx_value(){
-        std::string l;
-        std::ifstream temp(COOKIE_PATH.c_str());
-        std::size_t index , last;
-
-        if(temp.is_open()){
-                while(getline(temp, l)){
-                        index = l.rfind("GALX");
-
-                        if(index > 0 && index != std::string::npos){
-                                last = l.find("X") + 2;
-                                break;
-                        }
-                } 
-        }
-
-        user_data.galx = l.substr(last);
-        temp.close();
-        return;
+void FeedlyProvider::setChangeTokensFlag(bool value){
+        changeTokens = value;
 }
 void FeedlyProvider::curl_retrive(const std::string& uri){
         struct curl_slist *chunk = NULL;

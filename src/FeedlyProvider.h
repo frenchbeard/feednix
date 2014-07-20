@@ -36,7 +36,7 @@ struct PostData{
 class FeedlyProvider{
         public:
                 FeedlyProvider();
-                void authenticateUser(const std::string& email, const std::string& passwd);
+                void authenticateUser();
                 bool markPostsRead(const std::vector<std::string>* ids);
                 bool markCategoriesRead(const std::string& id, const std::string& lastReadEntryId);
                 bool markPostsUnread(const std::vector<std::string>* ids);
@@ -46,8 +46,8 @@ class FeedlyProvider{
                 const std::string getUserId();
                 PostData* getSinglePostData(const int index);
                 void setVerbose(bool value);
+                void setChangeTokensFlag(bool value);
                 void curl_cleanup();
-                void askForCredentials();
         private:
                 CURL *curl;
                 CURLcode curl_res;
@@ -55,9 +55,8 @@ class FeedlyProvider{
                 std::string userAuthCode;
                 std::string TOKEN_PATH, TEMP_PATH, COOKIE_PATH, rtrv_count;
                 UserData user_data;
-                bool verboseFlag;
+                bool verboseFlag, changeTokens;
                 std::vector<PostData> feeds;
-                void parseAuthenticationResponse();
                 void getCookies();
                 void enableVerbose();
                 void curl_retrive(const std::string&);
