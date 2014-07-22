@@ -162,7 +162,7 @@ bool FeedlyProvider::markPostsRead(const std::vector<std::string>* ids){
         enableVerbose();
 
         curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/4.0");
-        curl_easy_setopt(curl, CURLOPT_URL, ("https://sandbox.feedly.com/v3/markers"));
+        curl_easy_setopt(curl, CURLOPT_URL, ("https://cloud.feedly.com/v3/markers"));
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, data_holder);
         curl_easy_setopt(curl, CURLOPT_POST, true);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, document.c_str());
@@ -205,7 +205,7 @@ bool FeedlyProvider::markPostsUnread(const std::vector<std::string>* ids){
         enableVerbose();
 
         curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/4.0");
-        curl_easy_setopt(curl, CURLOPT_URL, ("https://sandbox.feedly.com/v3/markers"));
+        curl_easy_setopt(curl, CURLOPT_URL, ("https://cloud.feedly.com/v3/markers"));
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, data_holder);
         curl_easy_setopt(curl, CURLOPT_POST, true);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, document.c_str());
