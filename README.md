@@ -26,12 +26,12 @@ To explain, if I were to use a client secret I would need to distribute it
 along with the source code. This is an obvious security risk and I am going
 to keep this project open source, hence this new method.
 
-** Unfortunatley, as of now, the Developer tokens have an expiration of**
-** three months. This means that you must create a new one every three months.**
+**Unfortunatley, as of now, the Developer tokens have an expiration of**
+**three months. This means that you must create a new one every three months.**
 
-** I have modified Feednix to help you with this. IT CANNOT DO THIS**
-** AUTOMATICALLY since developer tokens involve sending you an email**
-** to retive them.**
+**I have modified Feednix to help you with this. IT CANNOT DO THIS**
+**AUTOMATICALLY since developer tokens involve sending you an email**
+**to retive them.**
 
 
 ## Contributing
