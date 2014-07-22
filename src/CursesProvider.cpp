@@ -220,7 +220,7 @@ void CursesProvider::control(){
                                          std::vector<std::string> *temp = new std::vector<std::string>;
                                          temp->push_back(data->id);
 
-                                         system(std::string("xdg-open \"" + data->originURL + "\" > /dev/null").c_str());
+                                         system(std::string("xdg-open \"" + data->originURL + "\" &> /dev/null").c_str());
                                          attron(COLOR_PAIR(4));
                                          mvprintw(LINES-2, 0, "Marking post read...");
                                          attroff(COLOR_PAIR(4));
