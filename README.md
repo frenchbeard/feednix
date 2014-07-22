@@ -15,7 +15,7 @@ First run autogen.sh script.
 
 Then run your standard make commands. Here is a one liner:
 
-'''./configure && make && sudo make install
+```./configure && make && sudo make install
 
 ## Clarification on Sign In Method (PLEASE READ)
 
