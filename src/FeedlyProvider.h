@@ -32,6 +32,8 @@ class FeedlyProvider{
                 FeedlyProvider();
                 void authenticateUser();
                 bool markPostsRead(const std::vector<std::string>* ids);
+                bool markPostsSaved(const std::vector<std::string>* ids);
+                bool markPostsUnsaved(const std::vector<std::string>* ids);
                 bool markCategoriesRead(const std::string& id, const std::string& lastReadEntryId);
                 bool markPostsUnread(const std::vector<std::string>* ids);
                 bool addSubscription(bool newCategory, const std::string& feed, std::vector<std::string> categories, const std::string& title = "");

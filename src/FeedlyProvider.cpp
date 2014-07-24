@@ -24,6 +24,7 @@ FeedlyProvider::FeedlyProvider(){
         if(reader.parse(tokenFile, root)){
                 rtrv_count = root["posts_retrive_count"].asString();
         }
+        tokenFile.close();
 }
 void FeedlyProvider::authenticateUser(){
         Json::Value root;
@@ -35,7 +36,8 @@ void FeedlyProvider::authenticateUser(){
         bool parsingSuccesful = reader.parse(initialConfig, root);
 
         if(!parsingSuccesful){
-                std::cerr << "ERROR: Unable to read from config file" << std::endl;
+                std::cerr << "ERROR: Log In Failed - Unable to read from config file" << std::endl;
+                std::cerr << reader.getFormatedErrorMessages() << std::endl;
                 exit(EXIT_FAILURE);
         }
 
@@ -115,7 +117,8 @@ const std::vector<PostData>* FeedlyProvider::giveStreamPosts(const std::string& 
         std::ifstream data(TEMP_PATH.c_str(), std::ifstream::binary);
         parsingSuccesful = reader.parse(data, root);
 
-        if(data == NULL || curl_res != CURLE_OK || !parsingSuccesful || !root.isMember("items")){ 
+
+        if(data == NULL || curl_res != CURLE_OK || !parsingSuccesful){
                 if(!parsingSuccesful)
                         std::cerr << "\nERROR: Failed to parse tokens file" << reader.getFormatedErrorMessages() << std::endl;
                 if(curl_res != CURLE_OK)
@@ -216,7 +219,93 @@ bool FeedlyProvider::markPostsUnread(const std::vector<std::string>* ids){
 
         fclose(data_holder);
         if(curl_res != CURLE_OK){
-                std::cerr << "Could not mark post(s) as read" << std::endl;
+                std::cerr << "Could not mark post(s) as unread" << std::endl;
+                return false;
+        }
+
+        return true;
+}
+bool FeedlyProvider::markPostsSaved(const std::vector<std::string>* ids){
+        FILE* data_holder = fopen(TEMP_PATH.c_str(), "wb");
+
+        Json::Value jsonCont;
+        Json::Value array;
+
+        jsonCont["type"] = "entries";
+
+        for(std::vector<std::string>::const_iterator it = ids->begin(); it != ids->end(); ++it)
+                array.append("entryIds") = *it;
+
+        jsonCont["entryIds"] = array;
+        jsonCont["action"] = "markAsSaved";
+
+        Json::StyledWriter writer;
+        std::string document = writer.write(jsonCont); 
+
+        curl = curl_easy_init();
+
+        struct curl_slist *chunk = NULL;
+        chunk = curl_slist_append(chunk, "Content-Type: application/json");
+        chunk = curl_slist_append(chunk, ("Authorization: OAuth " + user_data.authToken).c_str());
+
+        enableVerbose();
+
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/4.0");
+        curl_easy_setopt(curl, CURLOPT_URL, ("https://cloud.feedly.com/v3/markers"));
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, data_holder);
+        curl_easy_setopt(curl, CURLOPT_POST, true);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, document.c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
+
+        curl_res = curl_easy_perform(curl);
+        curl_easy_cleanup(curl);
+
+        fclose(data_holder);
+        if(curl_res != CURLE_OK){
+                std::cerr << "Could not mark post(s) as saved" << std::endl;
+                return false;
+        }
+
+        return true;
+}
+bool FeedlyProvider::markPostsUnsaved(const std::vector<std::string>* ids){
+        FILE* data_holder = fopen(TEMP_PATH.c_str(), "wb");
+
+        Json::Value jsonCont;
+        Json::Value array;
+
+        jsonCont["type"] = "entries";
+
+        for(std::vector<std::string>::const_iterator it = ids->begin(); it != ids->end(); ++it)
+                array.append("entryIds") = *it;
+
+        jsonCont["entryIds"] = array;
+        jsonCont["action"] = "markAsUnsaved";
+
+        Json::StyledWriter writer;
+        std::string document = writer.write(jsonCont); 
+
+        curl = curl_easy_init();
+
+        struct curl_slist *chunk = NULL;
+        chunk = curl_slist_append(chunk, "Content-Type: application/json");
+        chunk = curl_slist_append(chunk, ("Authorization: OAuth " + user_data.authToken).c_str());
+
+        enableVerbose();
+
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/4.0");
+        curl_easy_setopt(curl, CURLOPT_URL, ("https://cloud.feedly.com/v3/markers"));
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, data_holder);
+        curl_easy_setopt(curl, CURLOPT_POST, true);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, document.c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
+
+        curl_res = curl_easy_perform(curl);
+        curl_easy_cleanup(curl);
+
+        fclose(data_holder);
+        if(curl_res != CURLE_OK){
+                std::cerr << "Could not mark post(s) as unsaved" << std::endl;
                 return false;
         }
 
@@ -263,7 +352,7 @@ bool FeedlyProvider::markCategoriesRead(const std::string& id, const std::string
                 return false;
         }
 
-        return false;
+        return true;
 }
 bool FeedlyProvider::addSubscription(bool newCategory, const std::string& feed, std::vector<std::string> categories, const std::string& title){
         FILE* data_holder = fopen(TEMP_PATH.c_str(), "wb");

@@ -23,6 +23,5 @@
                 "read_item" : 3
         },
           // Count of posts to be retrived per request. Maximum is 10000
-        "posts_retrive_count" : "500",
-        "developer_token" : "",
+        "posts_retrive_count" : "500"
 }

@@ -1,3 +1,14 @@
+0.7.2
+==========
+* added save and unsave options
+* fixed seg fault caused by no posts exisiting (all posts had been read)
+* fixed bug involving pressing enter before anything else causing a seg fault
+* other minor bugs fixes
+
+0.7.1
+==========
+* code refraction
+
 0.7
 ==========
 

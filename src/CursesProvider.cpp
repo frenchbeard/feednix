@@ -72,9 +72,9 @@ void CursesProvider::init(){
 
         update_panels();
 
-        attron(COLOR_PAIR(4));
-        mvprintw(LINES - 1, 0, "Enter: See Preview  A: mark all read  u: mark unread  r: mark read  R: refresh  o: Open in plain-text  O: Open in Browser  F1: exit");
-        attroff(COLOR_PAIR(4));
+        attron(COLOR_PAIR(5));
+        mvprintw(LINES - 1, 0, "Enter: See Preview  A: mark all read  u: mark unread  r: mark read  s: mark saved  S: mark unsaved R: refresh  o: Open in plain-text  O: Open in Browser  F1: exit");
+        attroff(COLOR_PAIR(5));
         doupdate();
 
         top = panels[1];
@@ -82,7 +82,7 @@ void CursesProvider::init(){
 }
 void CursesProvider::control(){
         int ch;
-        MENU* curMenu = postsMenu;
+        MENU* curMenu = ctgMenu;
         ITEM* curItem = current_item(curMenu);
 
         update_counter();
@@ -92,8 +92,8 @@ void CursesProvider::control(){
 
                 switch(ch){
                         case 10:
-                                if(curMenu == ctgMenu){ top = (PANEL *)panel_userptr(top);
-
+                                if(curMenu == ctgMenu){ 
+                                        top = (PANEL *)panel_userptr(top);
                                         attron(COLOR_PAIR(4));
                                         mvprintw(LINES-2, 0, "Updating stream...");
                                         attroff(COLOR_PAIR(4));
@@ -105,10 +105,16 @@ void CursesProvider::control(){
 
                                         top_panel(top);
 
-                                        if(currentCategoryRead)
+                                        if(currentCategoryRead){
                                                 curMenu = ctgMenu;
-                                        else
+                                        }
+                                        else{
                                                 curMenu = postsMenu;
+                                                move(LINES-1, 0);
+                                                clrtoeol();
+                                                attron(COLOR_PAIR(5));
+                                                mvprintw(LINES - 1, 0, "Enter: See Preview  A: mark all read  u: mark unread  r: mark read  R: refresh  o: Open in plain-text  O: Open in Browser  F1: exit");
+                                        }
                                 }
                                 else if(panel_window(top) == postsWin){
                                         if(item_opts(curItem) == 1){
@@ -194,6 +200,34 @@ void CursesProvider::control(){
                                          item_opts_off(curItem, O_SELECTABLE);
                                          numUnread--;
                                          numRead++;
+
+                                         break;
+                                 }
+                        case 's':{
+                                         std::vector<std::string> *temp = new std::vector<std::string>;
+                                         temp->push_back(item_description(curItem));
+
+                                         attron(COLOR_PAIR(4));
+                                         mvprintw(LINES-2, 0, "Marking post saved...");
+                                         attroff(COLOR_PAIR(4));
+                                         refresh();
+
+                                         feedly.markPostsSaved(temp);
+                                         clear_updateline();
+
+                                         break;
+                                 }
+                        case 'S':{
+                                         std::vector<std::string> *temp = new std::vector<std::string>;
+                                         temp->push_back(item_description(curItem));
+
+                                         attron(COLOR_PAIR(4));
+                                         mvprintw(LINES-2, 0, "Marking post Unsaved...");
+                                         attroff(COLOR_PAIR(4));
+                                         refresh();
+
+                                         feedly.markPostsUnsaved(temp);
+                                         clear_updateline();
 
                                          break;
                                  }
@@ -338,10 +372,10 @@ void CursesProvider::createPostsMenu(){
         int n_choices, i = 0;
 
         const std::vector<PostData> *posts = feedly.giveStreamPosts("All");
-        totalPosts = posts->size();
-        numUnread = totalPosts;
 
         if(posts != NULL){
+                totalPosts = posts->size();
+                numUnread = totalPosts;
                 n_choices = posts->size();
                 postsItems = (ITEM **)calloc(sizeof(std::vector<PostData>::value_type)*n_choices, sizeof(ITEM *));
 
@@ -355,8 +389,8 @@ void CursesProvider::createPostsMenu(){
         }
         else{
                 postsMenu = new_menu(NULL);
-                print_in_center(postsWin, 3, 1, height, width-4, strdup("All Posts Read"), 1);  
                 currentCategoryRead = true;
+                update_panels();
         }
 
         postsWin = newwin(LINES-2, 0, 0, 40);
@@ -379,6 +413,9 @@ void CursesProvider::createPostsMenu(){
         menu_opts_off(postsMenu, O_SHOWDESC);
 
         post_menu(postsMenu);
+
+        if(posts == NULL)
+                print_in_center(postsWin, 3, 1, height, width-4, strdup("All Posts Read"), 1);  
 }
 void CursesProvider::ctgMenuCallback(char* label){
         int startx, starty, height, width;
@@ -388,7 +425,6 @@ void CursesProvider::ctgMenuCallback(char* label){
 
         int n_choices, i = 0;
         const std::vector<PostData>* posts = feedly.giveStreamPosts(label);
-
         if(posts == NULL){
                 totalPosts = 0;
                 numRead = 0;
@@ -569,8 +605,10 @@ void CursesProvider::cleanup(){
 
         unpost_menu(postsMenu);
         free_menu(postsMenu);
-        for(unsigned int i = 0; i < ARRAY_SIZE(postsItems); ++i)
-                free_item(postsItems[i]);
+        if(postsItems != NULL){
+                for(unsigned int i = 0; i < ARRAY_SIZE(postsItems); ++i)
+                        free_item(postsItems[i]);
+        }
 
         endwin();
         feedly.curl_cleanup();
