@@ -1,7 +1,7 @@
 Feednix
 =======
 
-Feedly client for Linux
+An ncurses based client for Feedly.
 
 ## Install
 
@@ -30,7 +30,7 @@ to keep this project open source, hence this new method.
 
 **I have modified Feednix to help you with this. IT CANNOT DO THIS**
 **AUTOMATICALLY since developer tokens involve sending you an email**
-**to retive them.**
+**to retrive them.**
 
 ## Usage
 
