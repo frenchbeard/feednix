@@ -12,6 +12,7 @@
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
+#include <signal.h>
 #include <jsoncpp/json/json.h>
 
 #include "CursesProvider.h"
@@ -21,12 +22,14 @@
 
 #define HOME_PATH getenv("HOME")
 
+
 CursesProvider::CursesProvider(bool verbose, bool change){
         feedly.setVerbose(verbose);
         feedly.setChangeTokensFlag(change);
         feedly.authenticateUser();
 
         initscr();
+
         start_color();
         cbreak();
         noecho();
@@ -82,14 +85,18 @@ void CursesProvider::init(){
 }
 void CursesProvider::control(){
         int ch;
-        MENU* curMenu = ctgMenu;
+        MENU* curMenu;
+        if(totalPosts == 0)
+                curMenu = ctgMenu;
+        else
+                curMenu = postsMenu;
+
         ITEM* curItem = current_item(curMenu);
 
         update_counter();
 
         while((ch = getch()) != KEY_F(1)){
                 curItem = current_item(curMenu);
-
                 switch(ch){
                         case 10:
                                 if(curMenu == ctgMenu){ 
