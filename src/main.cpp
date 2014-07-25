@@ -33,7 +33,7 @@ int main(int argc, char **argv){
  
         if(fopen(std::string(std::string(HOME_PATH) + "/.config/feednix/config.json").c_str(), "r") == NULL){
                 system(std::string("mkdir " + std::string(HOME_PATH) + "/.config/feednix").c_str());
-                system(std::string("cp /etc/feednix/config.json " + std::string(HOME_PATH) + "/.config/feednix/config.json").c_str());
+                system(std::string("cp /etc/xdg/feednix/config.json " + std::string(HOME_PATH) + "/.config/feednix/config.json").c_str());
                 system(std::string("chmod 600 " + std::string(HOME_PATH) + "/.config/feednix/config.json").c_str());
         }
  
